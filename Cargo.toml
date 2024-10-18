@@ -1,0 +1,13 @@
+[package]
+name = "centurion"
+version = "0.1.0"
+authors = ["Cameron Howell <jango.djarin@proton.me>"]
+description = "A GUI simulation management application adhering to the IEEE 1278.1-2012 DIS Standard."
+edition = "2021"
+license = "BSD-2-Clause"
+readme = "README.md"
+repository = "https://github.com/crhowell3/centurion"
+keywords = ["DIS", "IEEE", "GUI"]
+rust-version = "1.74"
+
+[dependencies]
