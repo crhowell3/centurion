@@ -11,3 +11,14 @@ keywords = ["DIS", "IEEE", "GUI"]
 rust-version = "1.74"
 
 [dependencies]
+iced = { version = "0.14.0-dev", default-features = false, features = [
+    "wgpu",
+    "tiny-skia",
+    "fira-sans",
+    "tokio",
+    "lazy",
+    "advanced",
+    "image",
+    "multi-window",
+] }
+log = "0.4.16"
