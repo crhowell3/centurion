@@ -1,11 +1,28 @@
+mod appearance;
+mod event;
+mod logger;
+mod screen;
+mod window;
+
+use std::collections::HashSet;
+use std::time::{Duration, Instant};
 use std::{env, mem};
+
+use appearance::{theme, Theme};
+use chrono::Utc,
+use data::config::{self, Config};
+use data::version::Version;
+use data::{environment, version};
 
 use iced::widget::{
     button, center, column, container, horizontal_space, scrollable, text, text_input,
 };
 use iced::window;
 use iced::{Center, Element, Fill, Subscription, Task, Theme, Vector};
+use tokio::runtime;
+use tokio_stream::wrappers::ReceiverStream;
 
+use self::event::{events, Event};
 use self::window::Window;
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -18,7 +35,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_default();
 
     if version {
-        println!("centurion {}", env!("CARGO_PKG_VERSION"));
+        println!("centurion {}", environment::formatted_version());
 
         return Ok(());
     }
@@ -35,6 +52,23 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn settings(config_load: &Result<Config, config::Error>) -> iced::Settings {
+    let default_text_size = config_load
+        .as_ref()
+        .ok()
+        .and_then(|config| config.font.size)
+        .map(f32::from)
+        .unwrap_or(theme::TEXT_SIZE);
+
+    iced::Settings {
+        default_font: font::MONO.clone().into(),
+        default_text_size: default_text_size.into(),
+        id: None,
+        antialiasing: false,
+        fonts: font::load(),
+    }
+}
+
 struct Centurion {
     version: Version,
     screen: Screen,
@@ -43,18 +77,91 @@ struct Centurion {
     main_window: Window,
 }
 
-#[derive(Debug, Clone)]
-enum Message {
-    AppearanceReload(),
+impl Centurion {
+    pub fn load_from_state(
+        main_window: window::Id,
+        config_load: Result<Config, config::Error>,
+    ) -> (Centurion, Task<Message>) {
+        let main_window = Window::new(main_window);
+
+        let load_dashboard = |config| match data::Dashboard::load() {
+            Ok(dashboard) => screen::Dashboard::restore(dashboard, config, &main_window),
+            Err(error) => {
+                log::warn!("failed to load dashboard: {error}");
+
+                screen::Dashboard::empty(config)
+            }
+        };
+
+        let (screen, config, command) = match config_load {
+            Ok(config) => {
+                let(screen, command) = load_dashboard(&config);
+
+                (
+                    Screen::Dashboard(screen),
+                    config,
+                    command.map(Message::Dashboard),
+                )
+            }
+            Err(config::Error::ConfigMissing {
+                has_yaml_config: true,
+            }) => (
+                Screen::Migration(screen::Migration::new()),
+                Config::default(),
+                Task::none(),
+            ),
+            Err(config::Error::ConfigMissing {
+                has_yaml_config: true,
+            }) => (
+                Screen::Welcome(screen::Welcome::new()),
+                Config::default(),
+                Task::none(),
+            ),
+            Err(error) => (
+                Screen::Help(screen::Help::new(error)),
+                Config::default(),
+                Task::none(),
+            ),
+        };
+
+        (
+            Centurion {
+                version: Version::new(),
+                screen,
+                theme: appearance::theme(&config.appearance.selected).into(),
+                config,
+                main_window,
+            },
+            command,
+        )
+    }
+}
+
+pub enum Screen {
+    Dashboard(screen::Dashboard),
+    Help(screen::Help),
+    Welcome(screen::Welcome),
+    Migration(screen::Migration),
+}
+
+#[derive(Debug)]
+pub enum Message {
+    AppearanceReloaded(data::appearance::Appearance),
     ScreenConfigReload(Result<Config, config::Error>),
     Dashboard(dashboard::Message),
+    Stream(stream::Update),
     Help(help::Message),
+    Welcome(welcome::Message),
     Event(window::Id, Event),
     Tick(Instant),
+    Version(Option<String>),
+    AppearanceChange(appearance::Mode),
+    Window(window::Id, window::Event),
+    WindowSettingsSaved(Result<(), window::Error>),
 }
 
 impl Centurion {
-    fn new() -> (Self, Task<Message>) {
+    fn new(config_load: Result<Config, config::Error>) -> (Centurion, Task<Message>) {
         let (main_window, open_main_window) = window::open(window::Settings {
             size: window::default_size(),
             position: window::Position::Default,
