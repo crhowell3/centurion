@@ -1,6 +1,6 @@
 pub use theme::Theme;
 
-pub mod Theme;
+pub mod theme;
 
 #[derive(Debug, Clone)]
 pub struct Appearance {
