@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use std::{env, mem};
 
 use appearance::{theme, Theme};
-use chrono::Utc,
+use chrono::Utc;
 use data::config::{self, Config};
 use data::version::Version;
 use data::{environment, version};
@@ -95,7 +95,7 @@ impl Centurion {
 
         let (screen, config, command) = match config_load {
             Ok(config) => {
-                let(screen, command) = load_dashboard(&config);
+                let (screen, command) = load_dashboard(&config);
 
                 (
                     Screen::Dashboard(screen),
@@ -249,26 +249,51 @@ impl Centurion {
     }
 
     fn view(&self, window_id: window::Id) -> Element<Message> {
-        if let Some(window) = self.windows.get(&window_id) {
-            center(window.view(window_id)).into()
+        let content = if window_id == self.main_window.id {
+            let screen = match &self.screen {
+                Screen::Dashboard(dashboard) => dashboard
+                    .view(&self.version, &self.config & self.theme, &self.main_window)
+                    .map(Message::Dashboard),
+                Screen::Help(help) => help.view().map(Message::Help),
+                Screen::Welcome(welcome) => welcome.view().map(Message::Welcome),
+                Screen::Migration(migration) => migration.view().map(Message::Migration),
+                Screen::Exit { .. } => column![].into(),
+            };
+
+            let content = container(screen)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .style(theme::container::general);
+
+            if let (Some(modal), Screen::Dashboard(_)) = (&self.modal, &self.screen) {
+                widget::modal(content, modal.view().map(Message::Modal), || {
+                    Message::Modal(modal::Message::Cancel)
+                })
+            } else {
+                column![content].into()
+            }
+        } else if let Screen::Dashboard(dashboard) = &self.screen {
+            dashboard
+                .view_window(id, &self.config, &self.theme, &self.main_window)
+                .map(Message::Dashboard)
         } else {
-            horizontal_space().into()
-        }
+            column![].into()
+        };
+
+        let height_margin = if cfg!(target_os = "macos") { 20 } else { 0 };
+
+        container(content)
+            .padding(padding::top(height_margin))
+            .style(theme::container::general)
+            .into()
     }
 
-    fn theme(&self, window: window::Id) -> Theme {
-        if let Some(window) = self.windows.get(&window) {
-            window.theme.clone()
-        } else {
-            Theme::default()
-        }
+    fn theme(&self, _window: window::Id) -> Theme {
+        self.theme.clone()
     }
 
-    fn scale_factor(&self, window: window::Id) -> f64 {
-        self.windows
-            .get(&window)
-            .map(|window| window.current_scale)
-            .unwrap_or(1.0)
+    fn scale_factor(&self, _window: window::Id) -> f64 {
+        self.config.scale_factor.into()
     }
 
     fn subscription(&self) -> Subscription<Message> {
