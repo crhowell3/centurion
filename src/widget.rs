@@ -4,33 +4,27 @@ use iced::alignment;
 use crate::Theme;
 
 pub use self::anchored_overlay::anchored_overlay;
-pub use self::color_picker::color_picker;
 pub use self::combo_box::combo_box;
 pub use self::context_menu::context_menu;
 pub use self::decorate::decorate;
 pub use self::double_pass::double_pass;
 pub use self::key_press::key_press;
-pub use self::message_content::message_content;
 pub use self::modal::modal;
 pub use self::selectable_rich_text::selectable_rich_text;
 pub use self::selectable_text::selectable_text;
-pub use self::shortcut::shortcut;
 pub use self::tooltip::tooltip;
 
 pub mod anchored_overlay;
 pub mod collection;
-pub mod color_picker;
 pub mod combo_box;
 pub mod context_menu;
 pub mod decorate;
 pub mod double_click;
 pub mod double_pass;
 pub mod key_press;
-pub mod message_content;
 pub mod modal;
 pub mod selectable_rich_text;
 pub mod selectable_text;
-pub mod shortcut;
 pub mod tooltip;
 
 pub type Renderer = iced::Renderer;

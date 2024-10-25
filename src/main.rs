@@ -46,13 +46,21 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let is_debug = !cfg(debug_assertions);
+    let is_debug = cfg!(debug_assertions);
+
+    let config_load = {
+        let rt = runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()?;
+
+        rt.block_on(Config::load())
+    };
 
     iced::daemon("Centurion", Centurion::update, Centurion::view)
         .theme(Centurion::theme)
         .scale_factor(Centurion::scale_factor)
         .subscription(Centurion::subscription)
-        .run_with(move || Centurion::new)
+        .run_with(move || Centurion::new(config_load))
         .inspect_err(|err| log::error!("{}", err))?;
 
     Ok(())
@@ -80,6 +88,7 @@ struct Centurion {
     screen: Screen,
     theme: Theme,
     config: Config,
+    modal: Option<Modal>,
     main_window: Window,
 }
 
@@ -156,6 +165,7 @@ pub enum Message {
     Event(window::Id, Event),
     Tick(Instant),
     Version(Option<String>),
+    Modal(modal::Message),
     AppearanceChange(appearance::Mode),
     Window(window::Id, window::Event),
     WindowSettingsSaved(Result<(), window::Error>),
@@ -193,34 +203,18 @@ impl Centurion {
 
                 let (command, event) = dashboard.update(
                     message,
-                    &mut self.clients,
                     &mut self.theme,
                     &self.version,
                     &self.config,
                     &self.main_window,
                 );
 
-                // Retrack after dashboard state changes
-                let track = dashboard.track();
-
                 let event_task = match event {
                     Some(dashboard::Event::ConfigReloaded(config)) => {
                         match config {
                             Ok(updated) => {
-                                let removed_servers = self
-                                    .servers
-                                    .keys()
-                                    .filter(|server| !updated.servers.contains(server))
-                                    .cloned()
-                                    .collect::<Vec<_>>();
-
-                                self.servers = updated.servers.clone();
                                 self.theme = appearance::theme(&updated.appearance.selected).into();
                                 self.config = updated;
-
-                                for server in removed_servers {
-                                    self.clients.quit(&server, None);
-                                }
                             }
                             Err(error) => {
                                 self.modal = Some(Modal::ReloadConfigurationError(error));
@@ -231,20 +225,7 @@ impl Centurion {
                     Some(dashboard::Event::ReloadThemes) => Task::future(Config::load())
                         .and_then(|config| Task::done(config.appearance))
                         .map(Message::AppearanceReloaded),
-                    Some(dashboard::Event::QuitServer(server)) => {
-                        self.clients.quit(&server, None);
-                        Task::none()
-                    }
-                    Some(dashboard::Event::Exit) => {
-                        let pending_exit = self.clients.exit();
-
-                        if pending_exit.is_empty() {
-                            iced::exit()
-                        } else {
-                            self.screen = Screen::Exit { pending_exit };
-                            Task::none()
-                        }
-                    }
+                    Some(dashboard::Event::Exit) => iced::exit(),
                     None => Task::none(),
                 };
 
