@@ -41,8 +41,6 @@ pub struct Colors {
     #[serde(default)]
     pub text: Text,
     #[serde(default)]
-    pub buffer: Buffer,
-    #[serde(default)]
     pub buttons: Buttons,
 }
 
@@ -108,36 +106,6 @@ pub struct General {
     pub horizontal_rule: Color,
     #[serde(default = "default_transparent", with = "color_serde")]
     pub unread_indicator: Color,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
-pub struct Buffer {
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub action: Color,
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub background: Color,
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub background_text_input: Color,
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub background_title_bar: Color,
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub border: Color,
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub border_selected: Color,
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub code: Color,
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub highlight: Color,
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub nickname: Color,
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub selection: Color,
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub timestamp: Color,
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub topic: Color,
-    #[serde(default = "default_transparent", with = "color_serde")]
-    pub url: Color,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
@@ -313,7 +281,7 @@ mod binary {
     use iced_core::Color;
     use strum::{IntoEnumIterator, VariantArray};
 
-    use super::{Buffer, Buttons, Colors, General, Text};
+    use super::{Buttons, Colors, General, Text};
 
     pub fn encode(colors: &Colors) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(Tag::VARIANTS.len() * (1 + 4));
@@ -332,7 +300,6 @@ mod binary {
         let mut colors = Colors {
             general: General::default(),
             text: Text::default(),
-            buffer: Buffer::default(),
             buttons: Buttons::default(),
         };
 
@@ -365,19 +332,6 @@ mod binary {
         TextTertiary = 6,
         TextSuccess = 7,
         TextError = 8,
-        BufferAction = 9,
-        BufferBackground = 10,
-        BufferBackgroundTextInput = 11,
-        BufferBackgroundTitleBar = 12,
-        BufferBorder = 13,
-        BufferBorderSelected = 14,
-        BufferCode = 15,
-        BufferHighlight = 16,
-        BufferNickname = 17,
-        BufferSelection = 18,
-        BufferTimestamp = 19,
-        BufferTopic = 20,
-        BufferUrl = 21,
         ButtonsPrimaryBackground = 30,
         ButtonsPrimaryBackgroundHover = 31,
         ButtonsPrimaryBackgroundSelected = 32,
@@ -400,19 +354,6 @@ mod binary {
                 Tag::TextTertiary => colors.text.tertiary,
                 Tag::TextSuccess => colors.text.success,
                 Tag::TextError => colors.text.error,
-                Tag::BufferAction => colors.buffer.action,
-                Tag::BufferBackground => colors.buffer.background,
-                Tag::BufferBackgroundTextInput => colors.buffer.background_text_input,
-                Tag::BufferBackgroundTitleBar => colors.buffer.background_title_bar,
-                Tag::BufferBorder => colors.buffer.border,
-                Tag::BufferBorderSelected => colors.buffer.border_selected,
-                Tag::BufferCode => colors.buffer.code,
-                Tag::BufferHighlight => colors.buffer.highlight,
-                Tag::BufferNickname => colors.buffer.nickname,
-                Tag::BufferSelection => colors.buffer.selection,
-                Tag::BufferTimestamp => colors.buffer.timestamp,
-                Tag::BufferTopic => colors.buffer.topic,
-                Tag::BufferUrl => colors.buffer.url,
                 Tag::ButtonsPrimaryBackground => colors.buttons.primary.background,
                 Tag::ButtonsPrimaryBackgroundHover => colors.buttons.primary.background_hover,
                 Tag::ButtonsPrimaryBackgroundSelected => colors.buttons.primary.background_selected,
@@ -443,19 +384,6 @@ mod binary {
                 Tag::TextTertiary => colors.text.tertiary = color,
                 Tag::TextSuccess => colors.text.success = color,
                 Tag::TextError => colors.text.error = color,
-                Tag::BufferAction => colors.buffer.action = color,
-                Tag::BufferBackground => colors.buffer.background = color,
-                Tag::BufferBackgroundTextInput => colors.buffer.background_text_input = color,
-                Tag::BufferBackgroundTitleBar => colors.buffer.background_title_bar = color,
-                Tag::BufferBorder => colors.buffer.border = color,
-                Tag::BufferBorderSelected => colors.buffer.border_selected = color,
-                Tag::BufferCode => colors.buffer.code = color,
-                Tag::BufferHighlight => colors.buffer.highlight = color,
-                Tag::BufferNickname => colors.buffer.nickname = color,
-                Tag::BufferSelection => colors.buffer.selection = color,
-                Tag::BufferTimestamp => colors.buffer.timestamp = color,
-                Tag::BufferTopic => colors.buffer.topic = color,
-                Tag::BufferUrl => colors.buffer.url = color,
                 Tag::ButtonsPrimaryBackground => colors.buttons.primary.background = color,
                 Tag::ButtonsPrimaryBackgroundHover => {
                     colors.buttons.primary.background_hover = color

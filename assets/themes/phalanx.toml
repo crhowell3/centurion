@@ -11,16 +11,6 @@ tertiary
 success
 error
 
-[buffer]
-background
-background_text_input
-background_title_bar
-timestamp
-action
-highlight
-selection
-border_selected
-
 [buttons.primary]
 background
 background_hover

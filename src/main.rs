@@ -1,7 +1,13 @@
+#![allow(clippy::large_enum_variant, clippy::too_many_arguments)]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 mod appearance;
 mod event;
 mod logger;
+mod modal;
 mod screen;
+mod stream;
+mod widget;
 mod window;
 
 use std::collections::HashSet;
@@ -105,11 +111,7 @@ impl Centurion {
             }
             Err(config::Error::ConfigMissing {
                 has_yaml_config: true,
-            }) => (
-                Screen::Migration(screen::Migration::new()),
-                Config::default(),
-                Task::none(),
-            ),
+            }) => (Config::default(), Task::none()),
             Err(config::Error::ConfigMissing {
                 has_yaml_config: true,
             }) => (
@@ -141,13 +143,12 @@ pub enum Screen {
     Dashboard(screen::Dashboard),
     Help(screen::Help),
     Welcome(screen::Welcome),
-    Migration(screen::Migration),
 }
 
 #[derive(Debug)]
 pub enum Message {
     AppearanceReloaded(data::appearance::Appearance),
-    ScreenConfigReload(Result<Config, config::Error>),
+    ScreenConfigReloaded(Result<Config, config::Error>),
     Dashboard(dashboard::Message),
     Stream(stream::Update),
     Help(help::Message),
@@ -171,79 +172,117 @@ impl Centurion {
         });
 
         let (mut centurion, command) = Centurion::load_from_state(main_window, config_load);
-        (centurion, Task::batch(commands))
-    }
-
-    fn title(&self, window: window::Id) -> String {
-        self.windows
-            .get(&window)
-            .map(|window| window.title.clone())
-            .unwrap_or_default()
+        (centurion, Task::batch(command))
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::OpenWindow => {
-                let Some(last_window) = self.windows.keys().last() else {
+            Message::AppearanceReloaded(appearance) => {
+                self.config.appearance = appearance;
+                Task::none()
+            }
+            Message::ScreenConfigReloaded(updated) => {
+                let (halloy, command) = Centurion::load_from_state(self.main_window.id, updated);
+                *self = halloy;
+                command
+            }
+            Message::Dashboard(message) => {
+                let Screen::Dashboard(dashboard) = &mut self.screen else {
                     return Task::none();
                 };
 
-                window::get_position(*last_window)
-                    .then(|last_position| {
-                        let position =
-                            last_position.map_or(window::Position::Default, |last_position| {
-                                window::Position::Specific(last_position + Vector::new(20.0, 20.0))
-                            });
+                let (command, event) = dashboard.update(
+                    message,
+                    &mut self.clients,
+                    &mut self.theme,
+                    &self.version,
+                    &self.config,
+                    &self.main_window,
+                );
 
-                        let (_id, open) = window::open(window::Settings {
-                            position,
-                            ..window::Settings::default()
-                        });
+                // Retrack after dashboard state changes
+                let track = dashboard.track();
 
-                        open
-                    })
-                    .map(Message::WindowOpened)
+                let event_task = match event {
+                    Some(dashboard::Event::ConfigReloaded(config)) => {
+                        match config {
+                            Ok(updated) => {
+                                let removed_servers = self
+                                    .servers
+                                    .keys()
+                                    .filter(|server| !updated.servers.contains(server))
+                                    .cloned()
+                                    .collect::<Vec<_>>();
+
+                                self.servers = updated.servers.clone();
+                                self.theme = appearance::theme(&updated.appearance.selected).into();
+                                self.config = updated;
+
+                                for server in removed_servers {
+                                    self.clients.quit(&server, None);
+                                }
+                            }
+                            Err(error) => {
+                                self.modal = Some(Modal::ReloadConfigurationError(error));
+                            }
+                        };
+                        Task::none()
+                    }
+                    Some(dashboard::Event::ReloadThemes) => Task::future(Config::load())
+                        .and_then(|config| Task::done(config.appearance))
+                        .map(Message::AppearanceReloaded),
+                    Some(dashboard::Event::QuitServer(server)) => {
+                        self.clients.quit(&server, None);
+                        Task::none()
+                    }
+                    Some(dashboard::Event::Exit) => {
+                        let pending_exit = self.clients.exit();
+
+                        if pending_exit.is_empty() {
+                            iced::exit()
+                        } else {
+                            self.screen = Screen::Exit { pending_exit };
+                            Task::none()
+                        }
+                    }
+                    None => Task::none(),
+                };
+
+                Task::batch(vec![
+                    event_task,
+                    command.map(Message::Dashboard),
+                    track.map(Message::Dashboard),
+                ])
             }
-            Message::WindowOpened(id) => {
-                let window = Window::new(self.windows.len() + 1);
-                let focus_input = text_input::focus(format!("input-{id}"));
-
-                self.windows.insert(id, window);
-
-                focus_input
-            }
-            Message::WindowClosed(id) => {
-                self.windows.remove(&id);
-
-                if self.windows.is_empty() {
-                    iced::exit()
-                } else {
-                    Task::none()
-                }
-            }
-            Message::ScaleInputChanged(id, scale) => {
-                if let Some(window) = self.windows.get_mut(&id) {
-                    window.scale_input = scale;
-                }
+            Message::Version(remote) => {
+                // Set latest known remote version
+                self.version.remote = remote;
 
                 Task::none()
             }
-            Message::ScaleChanged(id, scale) => {
-                if let Some(window) = self.windows.get_mut(&id) {
-                    window.current_scale = scale
-                        .parse::<f64>()
-                        .unwrap_or(window.current_scale)
-                        .clamp(0.5, 5.0);
-                }
+            Message::Help(message) => {
+                let Screen::Help(help) = &mut self.screen else {
+                    return Task::none();
+                };
 
-                Task::none()
+                match help.update(message) {
+                    Some(help::Event::RefreshConfiguration) => {
+                        Task::perform(Config::load(), Message::ScreenConfigReloaded)
+                    }
+                    None => Task::none(),
+                }
             }
-            Message::TitleChanged(id, title) => {
-                if let Some(window) = self.windows.get_mut(&id) {
-                    window.title = title;
-                }
+            Message::Welcome(message) => {
+                let Screen::Welcome(welcome) = &mut self.screen else {
+                    return Task::none();
+                };
 
-                Task::none()
+                match welcome.update(message) {
+                    Some(welcome::Event::RefreshConfiguration) => {
+                        Task::perform(Config::load(), Message::ScreenConfigReloaded)
+                    }
+                    None => Task::none(),
+                }
             }
         }
     }
@@ -256,8 +295,6 @@ impl Centurion {
                     .map(Message::Dashboard),
                 Screen::Help(help) => help.view().map(Message::Help),
                 Screen::Welcome(welcome) => welcome.view().map(Message::Welcome),
-                Screen::Migration(migration) => migration.view().map(Message::Migration),
-                Screen::Exit { .. } => column![].into(),
             };
 
             let content = container(screen)
@@ -297,6 +334,11 @@ impl Centurion {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        window::close_events().map(Message::WindowClosed)
+        let tick = iced::time::every(Duration::from_secs(1)).map(Message::Tick);
+
+        Subscription::batch(vec![
+            appearance::subscription().map(Message::AppearanceChange),
+            tick,
+        ])
     }
 }
