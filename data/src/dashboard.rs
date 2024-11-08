@@ -3,8 +3,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+use crate::environment;
 use crate::pane::Pane;
-use crate::{compression, environment};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dashboard {

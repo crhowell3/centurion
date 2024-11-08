@@ -222,7 +222,7 @@ impl subscription::Recipe for Events {
                                     position,
                                 },
                             )),
-                            Ok(Some((next_id, Event::Reized(size)))) if next_id == id => Some((
+                            Ok(Some((next_id, Event::Resized(size)))) if next_id == id => Some((
                                 vec![],
                                 State::MovingAndResizing {
                                     stream,

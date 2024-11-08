@@ -3,32 +3,21 @@
 
 mod appearance;
 mod event;
-mod logger;
-mod modal;
 mod screen;
-mod stream;
 mod widget;
 mod window;
 
-use std::collections::HashSet;
 use std::time::{Duration, Instant};
 use std::{env, mem};
 
 use appearance::{theme, Theme};
-use chrono::Utc;
-use data::config::{self, Config};
-use data::version::Version;
-use data::{environment, version};
-
-use iced::widget::{
-    button, center, column, container, horizontal_space, scrollable, text, text_input,
-};
-use iced::window;
-use iced::{Center, Element, Fill, Subscription, Task, Theme, Vector};
+use data::environment;
+use iced::widget::{column, container};
+use iced::{padding, Length, Subscription, Task};
+use screen::{dashboard, help, welcome};
 use tokio::runtime;
-use tokio_stream::wrappers::ReceiverStream;
 
-use self::event::{events, Event};
+use self::widget::Element;
 use self::window::Window;
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -88,7 +77,6 @@ struct Centurion {
     screen: Screen,
     theme: Theme,
     config: Config,
-    modal: Option<Modal>,
     main_window: Window,
 }
 
@@ -159,13 +147,10 @@ pub enum Message {
     AppearanceReloaded(data::appearance::Appearance),
     ScreenConfigReloaded(Result<Config, config::Error>),
     Dashboard(dashboard::Message),
-    Stream(stream::Update),
     Help(help::Message),
     Welcome(welcome::Message),
     Event(window::Id, Event),
-    Tick(Instant),
     Version(Option<String>),
-    Modal(modal::Message),
     AppearanceChange(appearance::Mode),
     Window(window::Id, window::Event),
     WindowSettingsSaved(Result<(), window::Error>),
@@ -182,7 +167,7 @@ impl Centurion {
         });
 
         let (mut centurion, command) = Centurion::load_from_state(main_window, config_load);
-        (centurion, Task::batch(command))
+        (centurion, command)
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
@@ -215,9 +200,6 @@ impl Centurion {
                             Ok(updated) => {
                                 self.theme = appearance::theme(&updated.appearance.selected).into();
                                 self.config = updated;
-                            }
-                            Err(error) => {
-                                self.modal = Some(Modal::ReloadConfigurationError(error));
                             }
                         };
                         Task::none()
@@ -265,6 +247,74 @@ impl Centurion {
                     None => Task::none(),
                 }
             }
+            Message::Event(window, event) => {
+                if let Screen::Dashboard(dashboard) = &mut self.screen {
+                    return dashboard
+                        .handle_event(
+                            window,
+                            event,
+                            &self.version,
+                            &self.config,
+                            &mut self.theme,
+                            &self.main_window,
+                        )
+                        .map(Message::Dashboard);
+                }
+
+                Task::none()
+            }
+            Message::Window(id, event) => {
+                if id == self.main_window.id {
+                    match event {
+                        window::Event::Moved(position) => {
+                            self.main_window.position = Some(position)
+                        }
+                        window::Event::Resized(size) => self.main_window.size = size,
+                        window::Event::Focused => self.main_window.focused = true,
+                        window::Event::Unfocused => self.main_window.focused = false,
+                        window::Event::Opened { position, size } => {
+                            self.main_window.opened(position, size)
+                        }
+                        window::Event::CloseRequested => {
+                            if let Screen::Dashboard(dashboard) = &mut self.screen {
+                                return dashboard.exit().map(Message::Dashboard);
+                            } else {
+                                return iced::exit();
+                            }
+                        }
+                    }
+
+                    Task::perform(
+                        data::Window::from(self.main_window).save(),
+                        Message::WindowSettingsSaved,
+                    )
+                } else if let Screen::Dashboard(dashboard) = &mut self.screen {
+                    dashboard
+                        .handle_window_event(id, event, &mut self.theme)
+                        .map(Message::Dashboard)
+                } else {
+                    Task::none()
+                }
+            }
+            Message::WindowSettingsSaved(result) => {
+                if let Err(err) = result {
+                    log::error!("window settings failed to save: {:?}", err)
+                }
+
+                Task::none()
+            }
+            Message::AppearanceChange(mode) => {
+                if let data::appearance::Selected::Dynamic { light, dark } =
+                    &self.config.appearance.selected
+                {
+                    self.theme = match mode {
+                        appearance::Mode::Dark => dark.clone().into(),
+                        appearance::Mode::Light => light.clone().into(),
+                    }
+                }
+
+                Task::none()
+            }
         }
     }
 
@@ -272,7 +322,7 @@ impl Centurion {
         let content = if window_id == self.main_window.id {
             let screen = match &self.screen {
                 Screen::Dashboard(dashboard) => dashboard
-                    .view(&self.version, &self.config & self.theme, &self.main_window)
+                    .view(&self.version, &self.config, &self.theme, &self.main_window)
                     .map(Message::Dashboard),
                 Screen::Help(help) => help.view().map(Message::Help),
                 Screen::Welcome(welcome) => welcome.view().map(Message::Welcome),
@@ -282,14 +332,6 @@ impl Centurion {
                 .width(Length::Fill)
                 .height(Length::Fill)
                 .style(theme::container::general);
-
-            if let (Some(modal), Screen::Dashboard(_)) = (&self.modal, &self.screen) {
-                widget::modal(content, modal.view().map(Message::Modal), || {
-                    Message::Modal(modal::Message::Cancel)
-                })
-            } else {
-                column![content].into()
-            }
         } else if let Screen::Dashboard(dashboard) = &self.screen {
             dashboard
                 .view_window(id, &self.config, &self.theme, &self.main_window)
@@ -315,11 +357,6 @@ impl Centurion {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        let tick = iced::time::every(Duration::from_secs(1)).map(Message::Tick);
-
-        Subscription::batch(vec![
-            appearance::subscription().map(Message::AppearanceChange),
-            tick,
-        ])
+        subscription::from_recipe(Message::AppearanceChange)
     }
 }
