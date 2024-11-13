@@ -11,8 +11,6 @@ keywords = ["DIS", "IEEE", "GUI"]
 rust-version = "1.74"
 
 [dependencies]
-data = { version = "0.1.0", path = "./data" }
-
 notify-rust = "4"
 chrono = { version = "0.4", features = ['serde'] }
 fern = "0.6.1"
@@ -40,9 +38,6 @@ itertools = "0.13.0"
 rodio = "0.19.0"
 strum = { version = "0.26.3", features = ["derive"] }
 tokio-stream = { version = "0.1.16", features = ["fs"] }
-
-[workspace]
-members = ["data"]
 
 [patch.crates-io]
 iced = { git = "https://github.com/iced-rs/iced", rev = "88a2fac1f9171f162ecfe2a033cba5ae62e23231" }
