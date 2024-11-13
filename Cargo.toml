@@ -11,7 +11,7 @@ keywords = ["DIS", "IEEE", "GUI"]
 rust-version = "1.74"
 
 [dependencies]
-data = { version = "0.1.0", path = "data" }
+data = { version = "0.1.0", path = "./data" }
 
 notify-rust = "4"
 chrono = { version = "0.4", features = ['serde'] }
