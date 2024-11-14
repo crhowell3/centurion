@@ -1,7 +1,7 @@
-pub mod help;
+pub mod welcome;
 
-pub use help::Help;
+pub use welcome::Welcome;
 
 pub enum Screen {
-    Help(Help),
+    Welcome(Welcome),
 }
