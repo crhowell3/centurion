@@ -14,7 +14,7 @@ rust-version = "1.74"
 notify-rust = "4"
 chrono = { version = "0.4", features = ['serde'] }
 fern = "0.6.1"
-iced = { version = "0.14.0-dev", default-features = false, features = [
+iced = { version = "0.13.1", default-features = false, features = [
     "wgpu",
     "tiny-skia",
     "fira-sans",
@@ -40,5 +40,4 @@ strum = { version = "0.26.3", features = ["derive"] }
 tokio-stream = { version = "0.1.16", features = ["fs"] }
 
 [patch.crates-io]
-iced = { git = "https://github.com/iced-rs/iced", rev = "88a2fac1f9171f162ecfe2a033cba5ae62e23231" }
 iced_core = { git = "https://github.com/iced-rs/iced", rev = "88a2fac1f9171f162ecfe2a033cba5ae62e23231" }
