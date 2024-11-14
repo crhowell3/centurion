@@ -1,0 +1,13 @@
+[book]
+authors =  ["Cameron Howell"]
+language = "en"
+multilingual = false
+src = "src"
+
+[output.html]
+cname = "centurion.crhowell3.org"
+default-theme = "phalanx"
+preferred-dark-theme = "phalanx"
+git-repository-url = "https://github.com/crhowell3/centurion"
+edit-url-template = "https://github.com/crhowell3/centurion/edit/main/book/{path}"
+additional-css = ["custom.css"]
