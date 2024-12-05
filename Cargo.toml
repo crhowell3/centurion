@@ -8,7 +8,7 @@ license = "BSD-2-Clause"
 readme = "README.md"
 repository = "https://github.com/crhowell3/centurion"
 keywords = ["DIS", "IEEE", "GUI"]
-rust-version = "1.74"
+rust-version = "1.82"
 
 [dependencies]
 notify-rust = "4"
