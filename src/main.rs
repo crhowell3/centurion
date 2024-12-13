@@ -1,6 +1,6 @@
 mod screen;
 
-use crate::screen::welcome;
+use crate::screen::dashboard;
 use crate::screen::Screen;
 
 use iced::{Element, Subscription, Task, Theme};
@@ -18,14 +18,14 @@ struct Centurion {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Welcome(welcome::Message),
+    Dashboard(dashboard::Message),
 }
 
 impl Centurion {
     pub fn new() -> (Self, Task<Message>) {
         (
             Self {
-                screen: Screen::Welcome(welcome::Welcome::new(true)),
+                screen: Screen::Dashboard(dashboard::Dashboard::new(true)),
             },
             Task::none(),
         )
@@ -37,13 +37,13 @@ impl Centurion {
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::Welcome(message) => {
-                let Screen::Welcome(welcome) = &mut self.screen else {
+            Message::Dashboard(message) => {
+                let Screen::Dashboard(dashboard) = &mut self.screen else {
                     return Task::none();
                 };
 
-                match welcome.update(message) {
-                    Some(welcome::Event::RefreshConfiguration) => Task::none(),
+                match dashboard.update(message) {
+                    Some(dashboard::Event::RefreshConfiguration) => Task::none(),
                     None => Task::none(),
                 }
             }
@@ -52,13 +52,13 @@ impl Centurion {
 
     fn view(&self) -> Element<Message> {
         match &self.screen {
-            Screen::Welcome(welcome) => welcome.view().map(Message::Welcome),
+            Screen::Dashboard(dashboard) => dashboard.view().map(Message::Dashboard),
         }
     }
 
     fn subscription(&self) -> Subscription<Message> {
         let screen = match &self.screen {
-            Screen::Welcome(_welcome) => Subscription::none(),
+            Screen::Dashboard(_dashboard) => Subscription::none(),
         };
 
         Subscription::batch([screen])

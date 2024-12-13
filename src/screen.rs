@@ -1,7 +1,7 @@
-pub mod welcome;
+pub mod dashboard;
 
-pub use welcome::Welcome;
+pub use dashboard::Dashboard;
 
 pub enum Screen {
-    Welcome(Welcome),
+    Dashboard(Dashboard),
 }
