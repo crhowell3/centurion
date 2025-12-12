@@ -1,3 +1,4 @@
+use std::{env, mem};
 mod screen;
 
 use crate::screen::dashboard;
@@ -5,11 +6,35 @@ use crate::screen::Screen;
 
 use iced::{Element, Subscription, Task, Theme};
 
-pub fn main() -> iced::Result {
-    iced::application(Centurion::title, Centurion::update, Centurion::view)
-        .subscription(Centurion::subscription)
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut args = env::args();
+    args.next();
+
+    let version = args.next().is_some_and(|s| s == "--version" || s == "-v");
+
+    if version {
+        println!("centurion {}", "0.1.0");
+
+        return Ok(());
+    }
+
+    iced::daemon(move || Centurion::new(), Centurion::update, Centurion::view)
+        .title(Centurion::title)
         .theme(Centurion::theme)
-        .run_with(move || Centurion::new())
+        .subscription(Centurion::subscription)
+        .settings(settings)
+        .run()
+        .inspect_err(|err| log::error!("{}", err))?;
+
+    Ok(())
+}
+
+fn settings(config_load: &Result<Config, config::Error>) -> iced::Settings {
+    let default_text_size = config_load
+        .as_ref()
+        .ok()
+        .and_then(|config| config.font.size)
+        .map_or(theme::TEXT_SIZE, f32::from);
 }
 
 struct Centurion {
@@ -31,8 +56,8 @@ impl Centurion {
         )
     }
 
-    fn title(&self) -> String {
-        "Centurion".to_owned()
+    fn title(&self, _window_id: window::Id) -> String {
+        String::from("Centurion")
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
