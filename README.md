@@ -55,23 +55,28 @@
 &nbsp;
 
 ## 💭 About
+
 Centurion is a GUI-based generic simulation management application compliant with IEEE 1278.1-2012 Distributed Interactive Simulation (DIS) application protocol.
 Specifically, this application is for managing DIS-based simulations via SIMAN PDUs as described in the standard.
 
 ## 📕 Documentation
+
 The documentation for the latest version of this application can be found [here](https://docs.rs/centurion/).
 All previously published versions of this package can be found on [crates.io](https://crates.io/crates/centurion/versions),
 and each version's respective documentation is accessible from there as well.
 
 ## 🔰 Getting Started
+
 ### Installation
+
 This application can be installed using cargo:
+
 ```shell
 cargo install centurion
 ```
 
 <p align="center">
-  Copyright &copy; 2024-present
+  Copyright &copy; 2025
   <a href="https://github.com/crhowell3" target="_blank">Cameron Howell</a>
 </p>
 <p align="center">
@@ -80,5 +85,3 @@ cargo install centurion
       src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=BSD-2-Clause&logoColor=d9e0ee&colorA=282a36&colorB=b16286"
   /></a>
 </p>
-
-
