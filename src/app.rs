@@ -1,6 +1,4 @@
-use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
 #[wasm_bindgen]
@@ -9,42 +7,9 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
-#[derive(Serialize, Deserialize)]
-struct GreetArgs<'a> {
-    name: &'a str,
-}
-
 #[function_component(App)]
 pub fn app() -> Html {
-    let greet_input_ref = use_node_ref();
-
-    let name = use_state(String::new);
-
-    let greet_msg = use_state(String::new);
-    {
-        let greet_msg = greet_msg;
-        let name = name;
-        let name2 = name.clone();
-        use_effect_with(name2, move |_| {
-            spawn_local(async move {
-                if name.is_empty() {
-                    return;
-                }
-
-                let args = serde_wasm_bindgen::to_value(&GreetArgs { name: &name })
-                    .expect("Should convert to JsValue");
-                // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-                let new_msg = invoke("greet", args)
-                    .await
-                    .as_string()
-                    .expect("Should convert to string");
-                greet_msg.set(new_msg);
-            });
-
-            || {}
-        });
-    }
-
+    // let sim_state = app.state::<AppData>();
     html! {
         <body>
             <header>
@@ -59,19 +24,19 @@ pub fn app() -> Html {
                     <div class="status-grid">
                         <div class="status-item">
                             <span class="label">{"State"}</span>
-                            <span class="value">{"Running"}</span>
+                            <span class="value">{"REPLACE"}</span>
                         </div>
                         <div class="status-item">
                             <span class="label">{"Sim Time"}</span>
-                            <span class="value">{"00:12:34"}</span>
+                            <span class="value">{"00:00:00"}</span>
                         </div>
                         <div class="status-item">
                             <span class="label">{"Wall Time"}</span>
-                            <span class="value">{"00:12:40"}</span>
+                            <span class="value">{"00:00:00"}</span>
                         </div>
                         <div class="status-item">
                             <span class="label">{"Active Entities"}</span>
-                            <span class="value">{"128"}</span>
+                            <span class="value">{"0"}</span>
                         </div>
                     </div>
                 </section>
@@ -79,12 +44,16 @@ pub fn app() -> Html {
                     <h2>{"Network Health"}</h2>
                     <div class="status-grid">
                         <div class="status-item">
-                            <span class="label">{"PDU Rate"}</span>
-                            <span class="value">{"100 / s"}</span>
+                            <span class="label">{"Incoming PDU Rate"}</span>
+                            <span class="value">{"0 / s"}</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">{"Outgoing PDU Rate"}</span>
+                            <span class="value">{"0 / s"}</span>
                         </div>
                         <div class="status-item">
                             <span class="label">{"Latency"}</span>
-                            <span class="value">{"18 ms"}</span>
+                            <span class="value">{"0 ms"}</span>
                         </div>
                         <div class="status-item">
                             <span class="label">{"Multicast Group"}</span>
@@ -105,7 +74,10 @@ pub fn app() -> Html {
                 <section class="panel wide">
                     <h2>{"Alerts"}</h2>
                     <ul class="alerts">
-                        <li class="alert warning">{"Entity 3: Error"}</li>
+                        <li class="alert warning">{"Entity 3: Value may be out of range"}</li>
+                    </ul>
+                    <ul class="alerts">
+                        <li class="alert error">{"Entity 3: Error processing header"}</li>
                     </ul>
                 </section>
             </main>
