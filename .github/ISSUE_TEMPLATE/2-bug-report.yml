@@ -5,16 +5,16 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for submitting a bug report. It helps make Open DIS Rust better.
+        Thank you for submitting a bug report. It helps make centurion better.
 
-        Make sure you are running the [latest](https://bun.sh/docs/installation#upgrading) version of Open DIS Rust.
+        Make sure you are running the latest version of centurion.
         The bug you are experiencing may already have been fixed.
 
         Please try to include as much information as possible.
 
   - type: input
     attributes:
-      label: What version of Open DIS Rust is running?
+      label: What version of centurion is running?
       description: Check the version in your Cargo.toml
   - type: input
     attributes:
