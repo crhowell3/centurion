@@ -75,8 +75,6 @@ pub fn app() -> Html {
                     <h2>{"Alerts"}</h2>
                     <ul class="alerts">
                         <li class="alert warning">{"Entity 3: Value may be out of range"}</li>
-                    </ul>
-                    <ul class="alerts">
                         <li class="alert error">{"Entity 3: Error processing header"}</li>
                     </ul>
                 </section>
