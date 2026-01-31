@@ -1,4 +1,5 @@
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
 #[wasm_bindgen]
@@ -9,7 +10,38 @@ extern "C" {
 
 #[function_component(App)]
 pub fn app() -> Html {
-    // let sim_state = app.state::<AppData>();
+    let startup = Callback::from(|_| {
+        spawn_local(async {
+            match invoke("send_startup", JsValue::NULL).await {
+                _ => web_sys::console::log_1(&"Sent startup command".into()),
+            }
+        })
+    });
+
+    let terminate = Callback::from(|_| {
+        spawn_local(async {
+            match invoke("send_terminate", JsValue::NULL).await {
+                _ => web_sys::console::log_1(&"Sent termination command".into()),
+            }
+        })
+    });
+
+    let standby = Callback::from(|_| {
+        spawn_local(async {
+            match invoke("send_standby", JsValue::NULL).await {
+                _ => web_sys::console::log_1(&"Sent standby command".into()),
+            }
+        })
+    });
+
+    let restart = Callback::from(|_| {
+        spawn_local(async {
+            match invoke("send_restart", JsValue::NULL).await {
+                _ => web_sys::console::log_1(&"Sent restart command".into()),
+            }
+        })
+    });
+
     html! {
         <body>
             <header>
@@ -41,46 +73,24 @@ pub fn app() -> Html {
                     </div>
                 </section>
                 <section class="panel">
-                    <h2>{"Network Health"}</h2>
-                    <div class="status-grid">
-                        <div class="status-item">
-                            <span class="label">{"Incoming PDU Rate"}</span>
-                            <span class="value">{"0 / s"}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="label">{"Outgoing PDU Rate"}</span>
-                            <span class="value">{"0 / s"}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="label">{"Latency"}</span>
-                            <span class="value">{"0 ms"}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="label">{"Multicast Group"}</span>
-                            <span class="value">{"239.1.1.1"}</span>
-                        </div>
-                    </div>
-                </section>
-                <section class="panel">
                     <h2>{"Global Controls"}</h2>
                     <div class="controls">
-                        <button class="success">{"Start"}</button>
-                        <button class="warning">{"Pause"}</button>
-                        <button class="danger">{"Stop"}</button>
-                        <button>{"Reset"}</button>
+                        <button class="success" onclick={startup}>{"Start"}</button>
+                        <button class="warning" onclick={standby}>{"Pause"}</button>
+                        <button class="danger" onclick={terminate}>{"Stop"}</button>
+                        <button onclick={restart}>{"Restart"}</button>
                     </div>
                 </section>
 
                 <section class="panel wide">
                     <h2>{"Alerts"}</h2>
-                    <ul class="alerts">
-                        <li class="alert warning">{"Entity 3: Value may be out of range"}</li>
-                        <li class="alert error">{"Entity 3: Error processing header"}</li>
-                    </ul>
                 </section>
             </main>
             <footer>
-                {"DIS Protocol: IEEE 1278.1-2012 | Site ID: 1 | Application ID: 10 | Status: Connected"}
+                <div class="footer-blurb">
+                    <span>{"Site ID: 1 | Application ID: 50 | Entity ID: 1"}</span>
+                    <span style={"font-style: italic"}>{"version 0.1.0"}</span>
+                </div>
             </footer>
         </body>
     }
