@@ -11,3 +11,8 @@ federates = [
         entity_id = 2,
     }
 ]
+
+[centurion-config]
+    site_id = 1
+    application_id = 50
+    entity_id = 1

@@ -1,6 +1,10 @@
+use std::collections::HashMap;
+
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
+
+use serde_json::Value;
 
 #[wasm_bindgen]
 extern "C" {
@@ -10,6 +14,43 @@ extern "C" {
 
 #[function_component(App)]
 pub fn app() -> Html {
+    let version = use_state(|| None::<String>);
+    let config = use_state(|| None::<(u32, u32, u32)>);
+    let site_id = use_state(|| None::<u32>);
+    let application_id = use_state(|| None::<u32>);
+    let entity_id = use_state(|| None::<u32>);
+
+    {
+        let config = config.clone();
+        use_effect_with((), move |_| {
+            spawn_local(async move {
+                let config_sim_addr = invoke("get_centurion_config", JsValue::NULL).await;
+                let sim_addr_map: HashMap<String, Value> =
+                    serde_wasm_bindgen::from_value(config_sim_addr).unwrap_or_default();
+                let temp: (u32, u32, u32) = (
+                    sim_addr_map["site_id"].as_u64().unwrap_or_default() as u32,
+                    sim_addr_map["application_id"].as_u64().unwrap_or_default() as u32,
+                    sim_addr_map["entity_id"].as_u64().unwrap_or_default() as u32,
+                );
+                config.set(Some(temp));
+            });
+            || ()
+        });
+    }
+
+    {
+        let version = version.clone();
+        use_effect_with((), move |_| {
+            spawn_local(async move {
+                let value = invoke("get_version", JsValue::NULL).await;
+                version.set(Some(
+                    serde_wasm_bindgen::from_value(value).unwrap_or_default(),
+                ));
+            });
+            || ()
+        });
+    }
+
     let startup = Callback::from(|_| {
         spawn_local(async {
             match invoke("send_startup", JsValue::NULL).await {
@@ -88,8 +129,20 @@ pub fn app() -> Html {
             </main>
             <footer>
                 <div class="footer-blurb">
-                    <span>{"Site ID: 1 | Application ID: 50 | Entity ID: 1"}</span>
-                    <span style={"font-style: italic"}>{"version 0.1.0"}</span>
+                    <span>{
+                        if let Some((x, y, z)) = &*config {
+                            format!("Site ID: {} | Application ID: {} | Entity ID: {}", x, y, z)
+                        } else {
+                            "loading addr...".into()
+                        }
+                    }</span>
+                    <span style={"font-style: italic"}>{
+                        if let Some(v) = &*version {
+                            format!("version {v}")
+                        } else {
+                            "loading version...".into()
+                        }
+                    }</span>
                 </div>
             </footer>
         </body>

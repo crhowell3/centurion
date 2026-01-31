@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
@@ -13,10 +13,18 @@ pub struct Federates {
     pub entity_id: u32,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CenturionConfig {
+    pub site_id: u32,
+    pub application_id: u32,
+    pub entity_id: u32,
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct ScenarioConfiguration {
     pub federates: Vec<Federates>,
     pub address: String,
+    pub centurion_config: CenturionConfig,
 }
 
 #[derive(Debug)]
@@ -63,12 +71,8 @@ impl Config {
 }
 
 pub fn load_config_from_file(path: &Path) -> Result<ScenarioConfiguration, ConfigError> {
-    let path = path
-        .canonicalize()
-        .map_err(|_| ConfigError::InvalidPath(path.to_path_buf()))?;
-
-    let contents = fs::read_to_string(&path)?;
-    let config = toml::from_str::<ScenarioConfiguration>(&contents)?;
+    let toml = fs::read_to_string(&path)?;
+    let config: ScenarioConfiguration = toml::from_str(&toml)?;
 
     Ok(config)
 }

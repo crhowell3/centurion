@@ -10,6 +10,8 @@ use app_data::*;
 use commands::*;
 use config::*;
 
+pub const VERSION_AND_GIT_HASH: &str = env!("VERSION_AND_GIT_HASH");
+
 pub fn run_cli(path: std::path::PathBuf) -> Result<(), ConfigError> {
     let config = load_config_from_file(&path.as_path())?;
     Config::set(config)?;
@@ -33,7 +35,9 @@ pub fn run() {
             send_startup,
             send_terminate,
             send_standby,
-            send_restart
+            send_restart,
+            get_version,
+            get_centurion_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
