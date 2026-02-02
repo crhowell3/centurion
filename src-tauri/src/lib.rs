@@ -49,10 +49,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             cmd::config::get_config,
             cmd::config::save_config,
-            cmd::transmit::send_startup,
-            cmd::transmit::send_terminate,
-            cmd::transmit::send_standby,
-            cmd::transmit::send_restart,
+            cmd::transmit::send_siman_pdu,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

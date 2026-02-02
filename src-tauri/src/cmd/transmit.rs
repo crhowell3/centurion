@@ -11,147 +11,132 @@ use open_dis_rust::simulation_management::{StartResumePdu, StopFreezePdu};
 use crate::core::app_state::AppState;
 
 #[tauri::command]
-pub fn send_startup(state: State<AppState>) -> Result<(), String> {
+pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), String> {
     let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
 
     let mut bytes = BytesMut::new();
-    let mut pdu = StartResumePdu::new();
 
-    pdu.originating_entity_id.simulation_address.application_id = 50;
-    pdu.originating_entity_id.simulation_address.site_id = 1;
-    pdu.originating_entity_id.entity_id = 1;
+    match command.as_str() {
+        "startup" => {
+            let mut pdu = StartResumePdu::new();
 
-    pdu.receiving_entity_id.simulation_address.application_id = 65535;
-    pdu.receiving_entity_id.simulation_address.site_id = 65535;
-    pdu.receiving_entity_id.entity_id = 65535;
+            pdu.originating_entity_id.simulation_address.application_id = 50;
+            pdu.originating_entity_id.simulation_address.site_id = 1;
+            pdu.originating_entity_id.entity_id = 1;
 
-    let mut ids = state
-        .request_ids
-        .lock()
-        .map_err(|_| "AppData lock poisoned")?;
+            pdu.receiving_entity_id.simulation_address.application_id = 65535;
+            pdu.receiving_entity_id.simulation_address.site_id = 65535;
+            pdu.receiving_entity_id.entity_id = 65535;
 
-    pdu.request_id = ids.start_resume;
+            let mut ids = state
+                .request_ids
+                .lock()
+                .map_err(|_| "AppData lock poisoned")?;
 
-    ids.start_resume += 1;
+            pdu.request_id = ids.start_resume;
 
-    let _ = pdu
-        .serialize(&mut bytes)
-        .map_err(|_| io::ErrorKind::InvalidData);
+            ids.start_resume += 1;
 
-    socket
-        .send_to(&bytes, "127.0.0.1:3000")
-        .map_err(|e| e.to_string())?;
+            let _ = pdu
+                .serialize(&mut bytes)
+                .map_err(|_| io::ErrorKind::InvalidData);
 
-    Ok(())
-}
+            socket
+                .send_to(&bytes, "127.0.0.1:3000")
+                .map_err(|e| e.to_string())?;
+        }
+        "terminate" => {
+            let mut pdu = StopFreezePdu::new();
 
-#[tauri::command]
-pub fn send_terminate(state: tauri::State<AppState>) -> Result<(), String> {
-    let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
+            pdu.originating_entity_id.simulation_address.application_id = 50;
+            pdu.originating_entity_id.simulation_address.site_id = 1;
+            pdu.originating_entity_id.entity_id = 1;
 
-    let mut bytes = BytesMut::new();
-    let mut pdu = StopFreezePdu::new();
+            pdu.receiving_entity_id.simulation_address.application_id = 65535;
+            pdu.receiving_entity_id.simulation_address.site_id = 65535;
+            pdu.receiving_entity_id.entity_id = 65535;
 
-    pdu.originating_entity_id.simulation_address.application_id = 50;
-    pdu.originating_entity_id.simulation_address.site_id = 1;
-    pdu.originating_entity_id.entity_id = 1;
+            pdu.reason = Reason::Termination;
 
-    pdu.receiving_entity_id.simulation_address.application_id = 65535;
-    pdu.receiving_entity_id.simulation_address.site_id = 65535;
-    pdu.receiving_entity_id.entity_id = 65535;
+            let mut ids = state
+                .request_ids
+                .lock()
+                .map_err(|_| "AppData lock poisoned")?;
 
-    pdu.reason = Reason::Termination;
+            pdu.request_id = ids.stop_freeze;
 
-    let mut ids = state
-        .request_ids
-        .lock()
-        .map_err(|_| "AppData lock poisoned")?;
+            ids.stop_freeze += 1;
 
-    pdu.request_id = ids.stop_freeze;
+            let _ = pdu
+                .serialize(&mut bytes)
+                .map_err(|_| io::ErrorKind::InvalidData);
 
-    ids.stop_freeze += 1;
+            socket
+                .send_to(&bytes, "127.0.0.1:3000")
+                .map_err(|e| e.to_string())?;
+        }
+        "standby" => {
+            let mut pdu = StopFreezePdu::new();
 
-    let _ = pdu
-        .serialize(&mut bytes)
-        .map_err(|_| io::ErrorKind::InvalidData);
+            pdu.originating_entity_id.simulation_address.application_id = 50;
+            pdu.originating_entity_id.simulation_address.site_id = 1;
+            pdu.originating_entity_id.entity_id = 1;
 
-    socket
-        .send_to(&bytes, "127.0.0.1:3000")
-        .map_err(|e| e.to_string())?;
+            pdu.receiving_entity_id.simulation_address.application_id = 65535;
+            pdu.receiving_entity_id.simulation_address.site_id = 65535;
+            pdu.receiving_entity_id.entity_id = 65535;
 
-    Ok(())
-}
+            pdu.reason = Reason::Recess;
 
-#[tauri::command]
-pub fn send_standby(state: tauri::State<AppState>) -> Result<(), String> {
-    let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
+            let mut ids = state
+                .request_ids
+                .lock()
+                .map_err(|_| "AppData lock poisoned")?;
 
-    let mut bytes = BytesMut::new();
-    let mut pdu = StopFreezePdu::new();
+            pdu.request_id = ids.stop_freeze;
 
-    pdu.originating_entity_id.simulation_address.application_id = 50;
-    pdu.originating_entity_id.simulation_address.site_id = 1;
-    pdu.originating_entity_id.entity_id = 1;
+            ids.stop_freeze += 1;
 
-    pdu.receiving_entity_id.simulation_address.application_id = 65535;
-    pdu.receiving_entity_id.simulation_address.site_id = 65535;
-    pdu.receiving_entity_id.entity_id = 65535;
+            let _ = pdu
+                .serialize(&mut bytes)
+                .map_err(|_| io::ErrorKind::InvalidData);
 
-    pdu.reason = Reason::Recess;
+            socket
+                .send_to(&bytes, "127.0.0.1:3000")
+                .map_err(|e| e.to_string())?;
+        }
+        "reset" => {
+            let mut pdu = StopFreezePdu::new();
 
-    let mut ids = state
-        .request_ids
-        .lock()
-        .map_err(|_| "AppData lock poisoned")?;
+            pdu.originating_entity_id.simulation_address.application_id = 50;
+            pdu.originating_entity_id.simulation_address.site_id = 1;
+            pdu.originating_entity_id.entity_id = 1;
 
-    pdu.request_id = ids.stop_freeze;
+            pdu.receiving_entity_id.simulation_address.application_id = 65535;
+            pdu.receiving_entity_id.simulation_address.site_id = 65535;
+            pdu.receiving_entity_id.entity_id = 65535;
 
-    ids.stop_freeze += 1;
+            pdu.reason = Reason::StopForRestart;
 
-    let _ = pdu
-        .serialize(&mut bytes)
-        .map_err(|_| io::ErrorKind::InvalidData);
+            let mut ids = state
+                .request_ids
+                .lock()
+                .map_err(|_| "AppData lock poisoned")?;
 
-    socket
-        .send_to(&bytes, "127.0.0.1:3000")
-        .map_err(|e| e.to_string())?;
+            pdu.request_id = ids.stop_freeze;
 
-    Ok(())
-}
+            ids.stop_freeze += 1;
 
-#[tauri::command]
-pub fn send_restart(state: tauri::State<AppState>) -> Result<(), String> {
-    let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
+            let _ = pdu
+                .serialize(&mut bytes)
+                .map_err(|_| io::ErrorKind::InvalidData);
 
-    let mut bytes = BytesMut::new();
-    let mut pdu = StopFreezePdu::new();
-
-    pdu.originating_entity_id.simulation_address.application_id = 50;
-    pdu.originating_entity_id.simulation_address.site_id = 1;
-    pdu.originating_entity_id.entity_id = 1;
-
-    pdu.receiving_entity_id.simulation_address.application_id = 65535;
-    pdu.receiving_entity_id.simulation_address.site_id = 65535;
-    pdu.receiving_entity_id.entity_id = 65535;
-
-    pdu.reason = Reason::StopForRestart;
-
-    let mut ids = state
-        .request_ids
-        .lock()
-        .map_err(|_| "AppData lock poisoned")?;
-
-    pdu.request_id = ids.stop_freeze;
-
-    ids.stop_freeze += 1;
-
-    let _ = pdu
-        .serialize(&mut bytes)
-        .map_err(|_| io::ErrorKind::InvalidData);
-
-    socket
-        .send_to(&bytes, "127.0.0.1:3000")
-        .map_err(|e| e.to_string())?;
+            socket
+                .send_to(&bytes, "127.0.0.1:3000")
+                .map_err(|e| e.to_string())?;
+        }
+        _ => return Err("Invalid command".to_string()),
+    }
 
     Ok(())
 }

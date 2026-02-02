@@ -12,37 +12,21 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
+fn command_button(send: Callback<&'static str>, command: &'static str) -> Callback<MouseEvent> {
+    Callback::from(move |_| send.emit(command))
+}
+
 #[function_component(App)]
 pub fn app() -> Html {
-    let startup = Callback::from(|_| {
-        spawn_local(async {
-            match invoke("send_startup", JsValue::NULL).await {
-                _ => web_sys::console::log_1(&"Sent startup command".into()),
-            }
-        })
-    });
-
-    let terminate = Callback::from(|_| {
-        spawn_local(async {
-            match invoke("send_terminate", JsValue::NULL).await {
-                _ => web_sys::console::log_1(&"Sent termination command".into()),
-            }
-        })
-    });
-
-    let standby = Callback::from(|_| {
-        spawn_local(async {
-            match invoke("send_standby", JsValue::NULL).await {
-                _ => web_sys::console::log_1(&"Sent standby command".into()),
-            }
-        })
-    });
-
-    let restart = Callback::from(|_| {
-        spawn_local(async {
-            match invoke("send_restart", JsValue::NULL).await {
-                _ => web_sys::console::log_1(&"Sent restart command".into()),
-            }
+    let send_siman_pdu = Callback::from(|command: &'static str| {
+        spawn_local(async move {
+            let payload = serde_json::json!({"command": command});
+            let _ = invoke(
+                "send_siman_pdu",
+                serde_wasm_bindgen::to_value(&payload).unwrap(),
+            )
+            .await;
+            web_sys::console::log_1(&format!("Sent {} command", command).into());
         })
     });
 
@@ -79,10 +63,10 @@ pub fn app() -> Html {
                 <section class="panel">
                     <h2>{"Global Controls"}</h2>
                     <div class="controls">
-                        <button class="success" onclick={startup}>{"Start"}</button>
-                        <button class="warning" onclick={standby}>{"Pause"}</button>
-                        <button class="danger" onclick={terminate}>{"Stop"}</button>
-                        <button onclick={restart}>{"Restart"}</button>
+                        <button class="success" onclick={command_button(send_siman_pdu.clone(), "startup")}>{"Start"}</button>
+                        <button class="warning" onclick={command_button(send_siman_pdu.clone(), "standby")}>{"Pause"}</button>
+                        <button class="danger" onclick={command_button(send_siman_pdu.clone(), "terminate")}>{"Stop"}</button>
+                        <button onclick={command_button(send_siman_pdu.clone(), "reset")}>{"Restart"}</button>
                     </div>
                 </section>
 
