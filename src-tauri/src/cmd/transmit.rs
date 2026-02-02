@@ -1,3 +1,5 @@
+use tauri::State;
+
 use std::io;
 use std::net::UdpSocket;
 
@@ -6,28 +8,10 @@ use open_dis_rust::common::Pdu;
 use open_dis_rust::common::enums::Reason;
 use open_dis_rust::simulation_management::{StartResumePdu, StopFreezePdu};
 
-use crate::VERSION_AND_GIT_HASH;
-use crate::app_data::AppData;
-use crate::config::CenturionConfig;
+use crate::core::app_state::AppState;
 
 #[tauri::command]
-pub fn get_version() -> Result<String, String> {
-    let version = VERSION_AND_GIT_HASH;
-    Ok(version.to_string())
-}
-
-#[tauri::command]
-pub fn get_centurion_config() -> Result<serde_json::Value, String> {
-    let config = CenturionConfig {
-        site_id: 1,
-        application_id: 50,
-        entity_id: 1,
-    };
-    Ok(serde_json::to_value(config).map_err(|e| e.to_string())?)
-}
-
-#[tauri::command]
-pub fn send_startup(state: tauri::State<AppData>) -> Result<(), String> {
+pub fn send_startup(state: State<AppState>) -> Result<(), String> {
     let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
 
     let mut bytes = BytesMut::new();
@@ -62,7 +46,7 @@ pub fn send_startup(state: tauri::State<AppData>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn send_terminate(state: tauri::State<AppData>) -> Result<(), String> {
+pub fn send_terminate(state: tauri::State<AppState>) -> Result<(), String> {
     let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
 
     let mut bytes = BytesMut::new();
@@ -99,7 +83,7 @@ pub fn send_terminate(state: tauri::State<AppData>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn send_standby(state: tauri::State<AppData>) -> Result<(), String> {
+pub fn send_standby(state: tauri::State<AppState>) -> Result<(), String> {
     let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
 
     let mut bytes = BytesMut::new();
@@ -136,7 +120,7 @@ pub fn send_standby(state: tauri::State<AppData>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn send_restart(state: tauri::State<AppData>) -> Result<(), String> {
+pub fn send_restart(state: tauri::State<AppState>) -> Result<(), String> {
     let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
 
     let mut bytes = BytesMut::new();

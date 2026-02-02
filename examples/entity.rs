@@ -5,7 +5,7 @@ use open_dis_rust::{
         GenericHeader, Pdu, PduHeader,
         enums::{PduType, Reason},
     },
-    simulation_management::{AcknowledgePdu, StartResumePdu, StopFreezePdu},
+    simulation_management::{StartResumePdu, StopFreezePdu},
 };
 use std::{net::UdpSocket, sync::Mutex};
 
@@ -37,7 +37,7 @@ fn initialize() {
     }
 }
 
-fn operate() {}
+// fn operate() {}
 
 #[inline]
 fn standby() {
@@ -63,7 +63,7 @@ fn shutdown() {
 enum State {
     Preinit,
     Initialized,
-    Operating,
+    //  Operating,
     Standby,
 }
 

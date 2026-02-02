@@ -32,7 +32,7 @@ impl fmt::Display for SimulationState {
     }
 }
 
-pub struct AppData {
+pub struct AppState {
     pub simulation_state: Mutex<SimulationState>,
     pub request_ids: Mutex<RequestIds>,
 }

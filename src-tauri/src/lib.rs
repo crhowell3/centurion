@@ -1,43 +1,58 @@
-use tauri::Builder;
+//! # centurion - generic simulation management application
+//!
+//! ## Architecture
+//!
+//! - **`cmd`**: Tauri command handlers for communication between the frontend and backend.
+
+use tauri::Manager;
+use tauri::async_runtime::spawn as tauri_spawn;
 
 use std::sync::Mutex;
 
-mod app_data;
-mod commands;
-mod config;
+pub mod cmd;
+pub mod config;
+pub mod core;
+pub mod utils;
 
-use app_data::*;
-use commands::*;
-use config::*;
-
-pub const VERSION_AND_GIT_HASH: &str = env!("VERSION_AND_GIT_HASH");
-
-pub fn run_cli(path: std::path::PathBuf) -> Result<(), ConfigError> {
-    let config = load_config_from_file(&path.as_path())?;
-    Config::set(config)?;
-    println!("Config loaded from CLI");
-    Ok(())
-}
-
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// Runs the Tauri application and executes the setup logic.
 ///
 /// # Panics
 /// - May panic if tauri fails to generate context
 ///
+/// These are intentional as the application cannot function without a Tauri runtime.
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    Builder::default()
+    tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .manage(AppData {
-            simulation_state: Mutex::new(SimulationState::Stopped),
-            request_ids: Mutex::new(RequestIds::new()),
+        .setup(|app| {
+            let log_dir = app
+                .path()
+                .app_log_dir()
+                .expect("Failed to get app log directory");
+
+            let handle = app.handle().clone();
+
+            tauri_spawn(async move {
+                let app_config = config::load_config(&handle).await;
+
+                utils::init_logging(&log_dir, app_config.advanced.log_level).unwrap_or_else(|e| {
+                    eprintln!("Failed to initialize logging: {e}");
+                });
+            });
+
+            Ok(())
+        })
+        .manage(core::AppState {
+            simulation_state: Mutex::new(core::SimulationState::Stopped),
+            request_ids: Mutex::new(core::RequestIds::new()),
         })
         .invoke_handler(tauri::generate_handler![
-            send_startup,
-            send_terminate,
-            send_standby,
-            send_restart,
-            get_version,
-            get_centurion_config,
+            cmd::config::get_config,
+            cmd::config::save_config,
+            cmd::transmit::send_startup,
+            cmd::transmit::send_terminate,
+            cmd::transmit::send_standby,
+            cmd::transmit::send_restart,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
