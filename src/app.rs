@@ -1,5 +1,10 @@
+use std::collections::HashMap;
+
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
+
+use serde_json::Value;
 
 #[wasm_bindgen]
 extern "C" {
@@ -7,9 +12,24 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
+fn command_button(send: Callback<&'static str>, command: &'static str) -> Callback<MouseEvent> {
+    Callback::from(move |_| send.emit(command))
+}
+
 #[function_component(App)]
 pub fn app() -> Html {
-    // let sim_state = app.state::<AppData>();
+    let send_siman_pdu = Callback::from(|command: &'static str| {
+        spawn_local(async move {
+            let payload = serde_json::json!({"command": command});
+            let _ = invoke(
+                "send_siman_pdu",
+                serde_wasm_bindgen::to_value(&payload).unwrap(),
+            )
+            .await;
+            web_sys::console::log_1(&format!("Sent {} command", command).into());
+        })
+    });
+
     html! {
         <body>
             <header>
@@ -41,49 +61,19 @@ pub fn app() -> Html {
                     </div>
                 </section>
                 <section class="panel">
-                    <h2>{"Network Health"}</h2>
-                    <div class="status-grid">
-                        <div class="status-item">
-                            <span class="label">{"Incoming PDU Rate"}</span>
-                            <span class="value">{"0 / s"}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="label">{"Outgoing PDU Rate"}</span>
-                            <span class="value">{"0 / s"}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="label">{"Latency"}</span>
-                            <span class="value">{"0 ms"}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="label">{"Multicast Group"}</span>
-                            <span class="value">{"239.1.1.1"}</span>
-                        </div>
-                    </div>
-                </section>
-                <section class="panel">
                     <h2>{"Global Controls"}</h2>
                     <div class="controls">
-                        <button class="success">{"Start"}</button>
-                        <button class="warning">{"Pause"}</button>
-                        <button class="danger">{"Stop"}</button>
-                        <button>{"Reset"}</button>
+                        <button class="success" onclick={command_button(send_siman_pdu.clone(), "startup")}>{"Start"}</button>
+                        <button class="warning" onclick={command_button(send_siman_pdu.clone(), "standby")}>{"Pause"}</button>
+                        <button class="danger" onclick={command_button(send_siman_pdu.clone(), "terminate")}>{"Stop"}</button>
+                        <button onclick={command_button(send_siman_pdu.clone(), "reset")}>{"Restart"}</button>
                     </div>
                 </section>
 
                 <section class="panel wide">
                     <h2>{"Alerts"}</h2>
-                    <ul class="alerts">
-                        <li class="alert warning">{"Entity 3: Value may be out of range"}</li>
-                    </ul>
-                    <ul class="alerts">
-                        <li class="alert error">{"Entity 3: Error processing header"}</li>
-                    </ul>
                 </section>
             </main>
-            <footer>
-                {"DIS Protocol: IEEE 1278.1-2012 | Site ID: 1 | Application ID: 10 | Status: Connected"}
-            </footer>
         </body>
     }
 }

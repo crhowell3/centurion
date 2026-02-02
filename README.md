@@ -34,7 +34,7 @@
   <a href="#">
     <img
       alt="Maintained"
-      src="https://img.shields.io/maintenance/yes/2025?style=for-the-badge&color=98971a&labelColor=282a36"
+      src="https://img.shields.io/maintenance/yes/2026?style=for-the-badge&color=98971a&labelColor=282a36"
     />
   </a>
 </p>
@@ -61,7 +61,7 @@ cargo install --path .
 ```
 
 <p align="center">
-  Copyright &copy; 2025
+  Copyright &copy; 2026
   <a href="https://github.com/crhowell3" target="_blank">Cameron Howell</a>
 </p>
 <p align="center">
