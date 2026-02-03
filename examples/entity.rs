@@ -3,11 +3,15 @@ use once_cell::sync::Lazy;
 use open_dis_rust::{
     common::{
         GenericHeader, Pdu, PduHeader,
+        data_types::EntityId,
         enums::{PduType, Reason},
     },
-    simulation_management::{StartResumePdu, StopFreezePdu},
+    simulation_management::{AcknowledgePdu, StartResumePdu, StopFreezePdu},
 };
-use std::{net::UdpSocket, sync::Mutex};
+use std::{
+    net::{SocketAddr, UdpSocket},
+    sync::Mutex,
+};
 
 static APP_DATA: Lazy<Mutex<AppData>> = Lazy::new(|| {
     Mutex::new(AppData {
@@ -67,6 +71,51 @@ enum State {
     Standby,
 }
 
+fn send_acknowledgement(
+    src: SocketAddr,
+    incoming_entity_id: EntityId,
+    incoming_request_id: u32,
+    socket: &UdpSocket,
+) -> std::io::Result<()> {
+    // Send AcknowledgePdu
+    let mut outgoing_pdu = AcknowledgePdu::new();
+    outgoing_pdu.acknowledge_flag = open_dis_rust::common::enums::AcknowledgeFlag::StartResume;
+    outgoing_pdu.response_flag =
+        open_dis_rust::common::enums::AcknowledgeResponseFlag::AbleToComply;
+
+    outgoing_pdu
+        .originating_entity_id
+        .simulation_address
+        .site_id = 1;
+    outgoing_pdu
+        .originating_entity_id
+        .simulation_address
+        .application_id = 10;
+    outgoing_pdu.originating_entity_id.entity_id = 1;
+
+    outgoing_pdu.receiving_entity_id.simulation_address.site_id =
+        incoming_entity_id.simulation_address.site_id;
+    outgoing_pdu
+        .receiving_entity_id
+        .simulation_address
+        .application_id = incoming_entity_id.simulation_address.application_id;
+    outgoing_pdu.receiving_entity_id.entity_id = incoming_entity_id.entity_id;
+
+    outgoing_pdu.request_id = incoming_request_id;
+
+    let mut outgoing_bytes = BytesMut::new();
+    outgoing_pdu
+        .serialize(&mut outgoing_bytes)
+        .map_err(|_| std::io::ErrorKind::InvalidData)?;
+
+    socket.send_to(&outgoing_bytes, src).map_err(|e| {
+        eprintln!("Error deserializing StartResumePdu: {}", e);
+        std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid data")
+    })?;
+
+    Ok(())
+}
+
 fn main() -> std::io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:3000")?;
     println!("Listening on {}", socket.local_addr()?);
@@ -74,7 +123,7 @@ fn main() -> std::io::Result<()> {
     let mut buf = [0u8; 1024];
 
     loop {
-        let (len, _) = socket.recv_from(&mut buf)?;
+        let (len, src) = socket.recv_from(&mut buf)?;
 
         if len > 0 {
             let mut bytes = BytesMut::from(&buf[..]);
@@ -83,14 +132,25 @@ fn main() -> std::io::Result<()> {
 
             match pdu_header.pdu_type {
                 PduType::StartResume => {
-                    let pdu = StartResumePdu::deserialize_without_header(&mut bytes, pdu_header)
-                        .map_err(|e| {
-                            eprintln!("Error deserializing StartResumePdu: {}", e);
-                            std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid data")
-                        });
-                    if pdu.is_ok() {
+                    let incoming_pdu = StartResumePdu::deserialize_without_header(
+                        &mut bytes, pdu_header,
+                    )
+                    .map_err(|e| {
+                        eprintln!("Error deserializing StartResumePdu: {}", e);
+                        std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid data")
+                    });
+                    if incoming_pdu.is_ok() {
                         initialize();
                     }
+
+                    let incoming_pdu = incoming_pdu.unwrap();
+
+                    send_acknowledgement(
+                        src,
+                        incoming_pdu.originating_entity_id,
+                        incoming_pdu.request_id,
+                        &socket,
+                    )?;
                 }
                 PduType::StopFreeze => {
                     let pdu = StopFreezePdu::deserialize_without_header(&mut bytes, pdu_header)

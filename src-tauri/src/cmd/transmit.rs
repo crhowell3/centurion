@@ -4,9 +4,9 @@ use std::io;
 use std::net::UdpSocket;
 
 use bytes::BytesMut;
-use open_dis_rust::common::Pdu;
-use open_dis_rust::common::enums::Reason;
-use open_dis_rust::simulation_management::{StartResumePdu, StopFreezePdu};
+use open_dis_rust::common::enums::{PduType, Reason};
+use open_dis_rust::common::{GenericHeader, Pdu, PduHeader};
+use open_dis_rust::simulation_management::{AcknowledgePdu, StartResumePdu, StopFreezePdu};
 
 use crate::core::app_state::AppState;
 
@@ -44,6 +44,33 @@ pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), Str
             socket
                 .send_to(&bytes, "127.0.0.1:3000")
                 .map_err(|e| e.to_string())?;
+
+            // Wait for response
+            let mut buf = [0; 1024];
+            loop {
+                let (len, _) = socket.recv_from(&mut buf).map_err(|e| e.to_string())?;
+                if len > 0 {
+                    let mut bytes = BytesMut::from(&buf[..]);
+                    let pdu_header = PduHeader::deserialize(&mut bytes);
+
+                    match pdu_header.pdu_type {
+                        PduType::Acknowledge => {
+                            let ack_pdu =
+                                AcknowledgePdu::deserialize_without_header(&mut bytes, pdu_header)
+                                    .map_err(|e| {
+                                        eprintln!("Error deserializing AcknowledgePdu: {}", e);
+                                        std::io::Error::new(
+                                            std::io::ErrorKind::InvalidData,
+                                            "Invalid data",
+                                        )
+                                    });
+                            let _ = dbg!(ack_pdu);
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+            }
         }
         "terminate" => {
             let mut pdu = StopFreezePdu::new();
