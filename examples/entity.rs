@@ -153,19 +153,30 @@ fn main() -> std::io::Result<()> {
                     )?;
                 }
                 PduType::StopFreeze => {
-                    let pdu = StopFreezePdu::deserialize_without_header(&mut bytes, pdu_header)
-                        .map_err(|e| {
-                            eprintln!("Error deserializing StopFreezePdu: {}", e);
-                            std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid data")
-                        });
-                    if pdu.is_ok() {
-                        let reason = pdu?.reason;
+                    let incoming_pdu = StopFreezePdu::deserialize_without_header(
+                        &mut bytes, pdu_header,
+                    )
+                    .map_err(|e| {
+                        eprintln!("Error deserializing StopFreezePdu: {}", e);
+                        std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid data")
+                    });
+                    if let Ok(ref pdu) = incoming_pdu {
+                        let reason = pdu.reason;
                         match reason {
                             Reason::Termination => shutdown(),
                             Reason::Recess => standby(),
                             _ => {}
                         }
                     }
+
+                    let incoming_pdu = incoming_pdu.unwrap();
+
+                    send_acknowledgement(
+                        src,
+                        incoming_pdu.originating_entity_id,
+                        incoming_pdu.request_id,
+                        &socket,
+                    )?;
                 }
                 _ => {
                     continue;

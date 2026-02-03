@@ -1,7 +1,10 @@
+use open_dis_rust::common::data_types::EntityId;
 use tauri::State;
 
 use std::io;
 use std::net::UdpSocket;
+
+use anyhow::Result;
 
 use bytes::BytesMut;
 use open_dis_rust::common::enums::{PduType, Reason};
@@ -10,23 +13,43 @@ use open_dis_rust::simulation_management::{AcknowledgePdu, StartResumePdu, StopF
 
 use crate::core::app_state::AppState;
 
+fn handle_ack(socket: &UdpSocket) -> Result<(), String> {
+    // Wait for response
+    socket
+        .set_read_timeout(Some(std::time::Duration::from_secs(2)))
+        .map_err(|e| e.to_string())?;
+
+    let mut buf = [0u8; 1024];
+    let (len, _) = socket.recv_from(&mut buf).map_err(|e| e.to_string())?;
+
+    let mut bytes = BytesMut::from(&buf[..len]);
+    let pdu_header = PduHeader::deserialize(&mut bytes);
+
+    if pdu_header.pdu_type != PduType::Acknowledge {
+        return Err("unexpected PDU type received in response".into());
+    }
+
+    AcknowledgePdu::deserialize_without_header(&mut bytes, pdu_header)
+        .map_err(|e| format!("AcknowledgePdu deserialization error: {e}"))?;
+
+    Ok(())
+}
+
 #[tauri::command]
 pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), String> {
     let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
 
     let mut bytes = BytesMut::new();
 
+    let centurion_id = EntityId::new(1, 50, 1);
+    let receive_all: EntityId = EntityId::new(0xFFFF, 0xFFFF, 0xFFFF);
+
     match command.as_str() {
         "startup" => {
             let mut pdu = StartResumePdu::new();
 
-            pdu.originating_entity_id.simulation_address.application_id = 50;
-            pdu.originating_entity_id.simulation_address.site_id = 1;
-            pdu.originating_entity_id.entity_id = 1;
-
-            pdu.receiving_entity_id.simulation_address.application_id = 65535;
-            pdu.receiving_entity_id.simulation_address.site_id = 65535;
-            pdu.receiving_entity_id.entity_id = 65535;
+            pdu.originating_entity_id = centurion_id;
+            pdu.receiving_entity_id = receive_all;
 
             let mut ids = state
                 .request_ids
@@ -45,43 +68,15 @@ pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), Str
                 .send_to(&bytes, "127.0.0.1:3000")
                 .map_err(|e| e.to_string())?;
 
-            // Wait for response
-            let mut buf = [0; 1024];
-            loop {
-                let (len, _) = socket.recv_from(&mut buf).map_err(|e| e.to_string())?;
-                if len > 0 {
-                    let mut bytes = BytesMut::from(&buf[..]);
-                    let pdu_header = PduHeader::deserialize(&mut bytes);
+            handle_ack(&socket)?;
 
-                    match pdu_header.pdu_type {
-                        PduType::Acknowledge => {
-                            let ack_pdu =
-                                AcknowledgePdu::deserialize_without_header(&mut bytes, pdu_header)
-                                    .map_err(|e| {
-                                        eprintln!("Error deserializing AcknowledgePdu: {}", e);
-                                        std::io::Error::new(
-                                            std::io::ErrorKind::InvalidData,
-                                            "Invalid data",
-                                        )
-                                    });
-                            let _ = dbg!(ack_pdu);
-                            break;
-                        }
-                        _ => {}
-                    }
-                }
-            }
+            Ok(())
         }
         "terminate" => {
             let mut pdu = StopFreezePdu::new();
 
-            pdu.originating_entity_id.simulation_address.application_id = 50;
-            pdu.originating_entity_id.simulation_address.site_id = 1;
-            pdu.originating_entity_id.entity_id = 1;
-
-            pdu.receiving_entity_id.simulation_address.application_id = 65535;
-            pdu.receiving_entity_id.simulation_address.site_id = 65535;
-            pdu.receiving_entity_id.entity_id = 65535;
+            pdu.originating_entity_id = centurion_id;
+            pdu.receiving_entity_id = receive_all;
 
             pdu.reason = Reason::Termination;
 
@@ -101,17 +96,16 @@ pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), Str
             socket
                 .send_to(&bytes, "127.0.0.1:3000")
                 .map_err(|e| e.to_string())?;
+
+            handle_ack(&socket)?;
+
+            Ok(())
         }
         "standby" => {
             let mut pdu = StopFreezePdu::new();
 
-            pdu.originating_entity_id.simulation_address.application_id = 50;
-            pdu.originating_entity_id.simulation_address.site_id = 1;
-            pdu.originating_entity_id.entity_id = 1;
-
-            pdu.receiving_entity_id.simulation_address.application_id = 65535;
-            pdu.receiving_entity_id.simulation_address.site_id = 65535;
-            pdu.receiving_entity_id.entity_id = 65535;
+            pdu.originating_entity_id = centurion_id;
+            pdu.receiving_entity_id = receive_all;
 
             pdu.reason = Reason::Recess;
 
@@ -131,17 +125,16 @@ pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), Str
             socket
                 .send_to(&bytes, "127.0.0.1:3000")
                 .map_err(|e| e.to_string())?;
+
+            handle_ack(&socket)?;
+
+            Ok(())
         }
         "reset" => {
             let mut pdu = StopFreezePdu::new();
 
-            pdu.originating_entity_id.simulation_address.application_id = 50;
-            pdu.originating_entity_id.simulation_address.site_id = 1;
-            pdu.originating_entity_id.entity_id = 1;
-
-            pdu.receiving_entity_id.simulation_address.application_id = 65535;
-            pdu.receiving_entity_id.simulation_address.site_id = 65535;
-            pdu.receiving_entity_id.entity_id = 65535;
+            pdu.originating_entity_id = centurion_id;
+            pdu.receiving_entity_id = receive_all;
 
             pdu.reason = Reason::StopForRestart;
 
@@ -161,9 +154,11 @@ pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), Str
             socket
                 .send_to(&bytes, "127.0.0.1:3000")
                 .map_err(|e| e.to_string())?;
-        }
-        _ => return Err("Invalid command".to_string()),
-    }
 
-    Ok(())
+            handle_ack(&socket)?;
+
+            Ok(())
+        }
+        _ => Err("Invalid command".to_string()),
+    }
 }
