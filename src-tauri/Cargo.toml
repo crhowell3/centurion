@@ -58,6 +58,7 @@ tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 strum = "0.27.2"
 strum_macros = "0.27.2"
 tracing-appender = "0.2.4"
+tauri-plugin-dialog = "2"
 
 [lints.clippy]
 pedantic     = { level = "deny", priority = -1 }

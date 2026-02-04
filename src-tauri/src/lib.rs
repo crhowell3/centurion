@@ -23,6 +23,7 @@ pub mod utils;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let log_dir = app
@@ -49,6 +50,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             cmd::config::get_config,
             cmd::config::save_config,
+            cmd::config::load_scenario_config,
             cmd::transmit::send_siman_pdu,
         ])
         .run(tauri::generate_context!())

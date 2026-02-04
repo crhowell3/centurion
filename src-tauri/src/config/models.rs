@@ -18,6 +18,12 @@ pub struct AdvancedConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ScenarioConfig {
+    pub multicast_address: String,
+    pub port: u16,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AppConfig {
     pub simulation_address: SimulationAddress,
     #[serde(skip)]

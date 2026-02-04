@@ -8,14 +8,6 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
-async fn load_config_via_dialog() -> Option<crate::Config> {
-    // NOOP
-    Some(crate::Config {
-        multicast_address: "224.0.0.1".to_string(),
-        port: 1000,
-    })
-}
-
 #[derive(Properties, PartialEq)]
 pub struct WelcomeModalProps {
     pub on_loaded: Callback<crate::Config>,
@@ -29,9 +21,7 @@ pub fn welcome_modal(props: &WelcomeModalProps) -> Html {
             let on_loaded = on_loaded.clone();
 
             wasm_bindgen_futures::spawn_local(async move {
-                if let Some(config) = load_config_via_dialog().await {
-                    on_loaded.emit(config);
-                }
+                let _ = invoke("load_scenario_config", JsValue::NULL).await;
             });
         })
     };
