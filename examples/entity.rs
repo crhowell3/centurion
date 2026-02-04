@@ -6,7 +6,7 @@ use open_dis_rust::{
         data_types::EntityId,
         enums::{PduType, Reason},
     },
-    simulation_management::{AcknowledgePdu, StartResumePdu, StopFreezePdu},
+    simulation_management::{AcknowledgePdu, ActionRequestPdu, ActionResponsePdu, StartResumePdu, StopFreezePdu},
 };
 use std::{
     net::{SocketAddr, UdpSocket},
@@ -41,7 +41,25 @@ fn initialize() {
     }
 }
 
-// fn operate() {}
+fn operate() {
+    let mut app_data = APP_DATA.lock().unwrap();
+
+    match app_data.state {
+        State::Preinit => {
+            println!("Cannot operate until initialized!");
+        }
+        State::Initialized => {
+            println!("Transitioning to operation mode...");
+            app_data.state = State::Operating;
+        }
+        State::Operating => {
+            println!("Already operating!");
+        }
+        _ => {
+            println!("Invalid state transition")
+        }
+    }
+}
 
 #[inline]
 fn standby() {
@@ -67,7 +85,7 @@ fn shutdown() {
 enum State {
     Preinit,
     Initialized,
-    //  Operating,
+    Operating,
     Standby,
 }
 
@@ -131,6 +149,28 @@ fn main() -> std::io::Result<()> {
             let pdu_header = PduHeader::deserialize(&mut bytes);
 
             match pdu_header.pdu_type {
+                PduType::ActionRequest => {
+                    let incoming_pdu = ActionRequestPdu::deserialize_without_header(
+                        &mut bytes, pdu_header,
+                    )
+                    .map_err(|e| {
+                        eprintln!("Error deserializing ActionRequestPdu: {}", e);
+                        std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid data")
+                    });
+                    
+                    if incoming_pdu.is_ok() {
+                        initialize();
+                    }
+
+                    let incoming_pdu = incoming_pdu.unwrap();
+
+                    send_acknowledgement(
+                        src,
+                        incoming_pdu.originating_entity_id,
+                        incoming_pdu.request_id,
+                        &socket,
+                    )?;
+                }
                 PduType::StartResume => {
                     let incoming_pdu = StartResumePdu::deserialize_without_header(
                         &mut bytes, pdu_header,
@@ -139,8 +179,9 @@ fn main() -> std::io::Result<()> {
                         eprintln!("Error deserializing StartResumePdu: {}", e);
                         std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid data")
                     });
+                    
                     if incoming_pdu.is_ok() {
-                        initialize();
+                        operate();
                     }
 
                     let incoming_pdu = incoming_pdu.unwrap();

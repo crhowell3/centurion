@@ -22,6 +22,11 @@ pub fn welcome_modal(props: &WelcomeModalProps) -> Html {
 
             wasm_bindgen_futures::spawn_local(async move {
                 let _ = invoke("load_scenario_config", JsValue::NULL).await;
+                let dummy_config = crate::Config {
+                    multicast_address: "dummy".to_string(),
+                    port: 1111,
+                };
+                on_loaded.emit(dummy_config);
             });
         })
     };
@@ -29,6 +34,7 @@ pub fn welcome_modal(props: &WelcomeModalProps) -> Html {
     html! {
         <div class="modal-backdrop">
             <div class="modal">
+                <img src="assets/Square150x150Logo.png" />
                 <h1>{ "Welcome to Centurion" }</h1>
                 <p>{ "Select a configuration file to get started." }</p>
                 <button onclick={on_click}>{ "LOAD" }</button>
