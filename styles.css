@@ -211,3 +211,84 @@ button:active {
     display: flex;
     justify-content: space-between;
 }
+
+/* Full-screen darkened backdrop */
+.modal-backdrop {
+    position: fixed;
+    inset: 0; /* top/right/bottom/left = 0 */
+    background: var(--bg));
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    z-index: 1000;
+}
+
+/* Modal container */
+.modal {
+    background: var(--panel);
+    color: var(--text);
+
+    width: 90%;
+    max-width: 420px;
+
+    padding: 2rem;
+    border-radius: 12px;
+
+    box-shadow:
+        0 10px 25px rgba(0, 0, 0, 0.2),
+        0 2px 6px rgba(0, 0, 0, 0.15);
+
+    text-align: center;
+}
+
+/* Title */
+.modal h1 {
+    margin: 0 0 0.75rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+/* Body text */
+.modal p {
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    line-height: 1.4;
+}
+
+/* Primary action button */
+.modal button {
+    appearance: none;
+    border: none;
+
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+
+    font-size: 0.95rem;
+    font-weight: 500;
+
+    width: 100px;
+
+    cursor: pointer;
+
+    background: var(--accent); /* blue */
+    color: var(--text);
+
+    transition:
+        background 0.15s ease,
+        transform 0.1s ease;
+}
+
+.modal button:hover {
+    background: var(--success));
+}
+
+.modal button:active {
+    transform: translateY(1px);
+}
+
+.modal button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
