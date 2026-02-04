@@ -16,6 +16,7 @@
     --muted: #a89984; /* light4 */
 
     --accent: #83a598; /* blue */
+    --info: #83a598; /* blue */
     --warning: #fabd2f; /* yellow */
     --error: #fb4934; /* red */
     --success: #b8bb26; /* green */
@@ -185,6 +186,11 @@ button:active {
     border-radius: 8px;
     border: 1px solid var(--border);
     font-size: 0.85rem;
+}
+
+.alert.info {
+    border-color: var(--info);
+    color: var(--info);
 }
 
 .alert.warning {

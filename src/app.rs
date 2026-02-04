@@ -1,19 +1,11 @@
-use std::collections::HashMap;
-
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
-
-use serde_json::Value;
 
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
-}
-
-fn command_button(send: Callback<&'static str>, command: &'static str) -> Callback<MouseEvent> {
-    Callback::from(move |_| send.emit(command))
 }
 
 #[function_component(App)]
@@ -30,6 +22,26 @@ pub fn app() -> Html {
         })
     });
 
+    let notifications = use_state(|| Vec::<String>::new());
+
+    let notifications_handle = notifications.clone();
+
+    let append_notification = Callback::from(move |message: String| {
+        let mut new_notifications = (*notifications_handle).clone();
+        new_notifications.push(message);
+        notifications_handle.set(new_notifications);
+    });
+
+    let send_command = |cmd: &'static str| {
+        let send = send_siman_pdu.clone();
+        let notify = append_notification.clone();
+
+        Callback::from(move |_| {
+            send.emit(cmd);
+            notify.emit(format!("{} command sent", cmd.to_uppercase()));
+        })
+    };
+
     html! {
         <body>
             <header>
@@ -44,7 +56,7 @@ pub fn app() -> Html {
                     <div class="status-grid">
                         <div class="status-item">
                             <span class="label">{"State"}</span>
-                            <span class="value">{"REPLACE"}</span>
+                            <span class="value">{"Preinit"}</span>
                         </div>
                         <div class="status-item">
                             <span class="label">{"Sim Time"}</span>
@@ -63,15 +75,21 @@ pub fn app() -> Html {
                 <section class="panel">
                     <h2>{"Global Controls"}</h2>
                     <div class="controls">
-                        <button class="success" onclick={command_button(send_siman_pdu.clone(), "startup")}>{"Start"}</button>
-                        <button class="warning" onclick={command_button(send_siman_pdu.clone(), "standby")}>{"Pause"}</button>
-                        <button class="danger" onclick={command_button(send_siman_pdu.clone(), "terminate")}>{"Stop"}</button>
-                        <button onclick={command_button(send_siman_pdu.clone(), "reset")}>{"Restart"}</button>
+                        <button class="primary" onclick={send_command("initialize")}>{"Initialize"}</button>
+                        <button class="success" onclick={send_command("startup")}>{"Operate"}</button>
+                        <button class="warning" onclick={send_command("standby")}>{"Pause"}</button>
+                        <button class="danger" onclick={send_command("terminate")}>{"Shutdown"}</button>
+                        <button onclick={send_command("reset")}>{"Restart"}</button>
                     </div>
                 </section>
 
                 <section class="panel wide">
-                    <h2>{"Alerts"}</h2>
+                    <h2>{"Notifications"}</h2>
+                    <ul class="alerts">
+                        {notifications.iter().rev().map(|message| html! {
+                            <li class="alert info">{format!("[INFO] {message}")}</li>
+                        }).collect::<Html>()}
+                    </ul>
                 </section>
             </main>
         </body>
