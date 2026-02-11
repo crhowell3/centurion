@@ -6,7 +6,7 @@ use open_dis_rust::{
         data_types::EntityId,
         enums::{PduType, Reason},
     },
-    simulation_management::{AcknowledgePdu, ActionRequestPdu, ActionResponsePdu, StartResumePdu, StopFreezePdu},
+    simulation_management::{AcknowledgePdu, ActionRequestPdu, StartResumePdu, StopFreezePdu},
 };
 use std::{
     net::{SocketAddr, UdpSocket},
@@ -150,14 +150,13 @@ fn main() -> std::io::Result<()> {
 
             match pdu_header.pdu_type {
                 PduType::ActionRequest => {
-                    let incoming_pdu = ActionRequestPdu::deserialize_without_header(
-                        &mut bytes, pdu_header,
-                    )
-                    .map_err(|e| {
-                        eprintln!("Error deserializing ActionRequestPdu: {}", e);
-                        std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid data")
-                    });
-                    
+                    let incoming_pdu =
+                        ActionRequestPdu::deserialize_without_header(&mut bytes, pdu_header)
+                            .map_err(|e| {
+                                eprintln!("Error deserializing ActionRequestPdu: {}", e);
+                                std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid data")
+                            });
+
                     if incoming_pdu.is_ok() {
                         initialize();
                     }
@@ -179,7 +178,7 @@ fn main() -> std::io::Result<()> {
                         eprintln!("Error deserializing StartResumePdu: {}", e);
                         std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid data")
                     });
-                    
+
                     if incoming_pdu.is_ok() {
                         operate();
                     }

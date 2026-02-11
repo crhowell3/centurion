@@ -30,6 +30,7 @@
 
 .controls {
     display: flex;
+    justify-content: center;
     gap: 0.5rem;
     flex-wrap: wrap;
 }
@@ -216,7 +217,7 @@ button:active {
 .modal-backdrop {
     position: fixed;
     inset: 0; /* top/right/bottom/left = 0 */
-    background: var(--bg));
+    background: var(--bg);
 
     display: flex;
     align-items: center;
@@ -281,7 +282,7 @@ button:active {
 }
 
 .modal button:hover {
-    background: var(--success));
+    background: var(--success);
 }
 
 .modal button:active {

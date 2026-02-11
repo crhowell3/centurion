@@ -51,28 +51,7 @@ pub fn dashboard() -> Html {
                 </span>
             </header>
             <main>
-                <section class="panel">
-                    <h2>{"Simulation Status"}</h2>
-                    <div class="status-grid">
-                        <div class="status-item">
-                            <span class="label">{"State"}</span>
-                            <span class="value">{"Preinit"}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="label">{"Sim Time"}</span>
-                            <span class="value">{"00:00:00"}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="label">{"Wall Time"}</span>
-                            <span class="value">{"00:00:00"}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="label">{"Active Entities"}</span>
-                            <span class="value">{"0"}</span>
-                        </div>
-                    </div>
-                </section>
-                <section class="panel">
+                <section class="panel wide">
                     <h2>{"Global Controls"}</h2>
                     <div class="controls">
                         <button class="primary" onclick={send_command("initialize")}>{"Initialize"}</button>
