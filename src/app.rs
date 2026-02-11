@@ -1,5 +1,4 @@
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
 use crate::dashboard::Dashboard;
@@ -30,7 +29,7 @@ pub fn app() -> Html {
                 crate::AppStatus::WaitingForConfig => html! {
                     <WelcomeModal on_loaded={on_config_loaded}/>
                 },
-                crate::AppStatus::Loaded(config) => html! {
+                crate::AppStatus::Loaded(_config) => html! {
                     <Dashboard />
                 },
             }

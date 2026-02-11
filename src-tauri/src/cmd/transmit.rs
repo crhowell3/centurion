@@ -7,9 +7,11 @@ use std::net::UdpSocket;
 use anyhow::Result;
 
 use bytes::BytesMut;
-use open_dis_rust::common::enums::{PduType, Reason, ActionRequestActionID};
+use open_dis_rust::common::enums::{ActionRequestActionID, PduType, Reason};
 use open_dis_rust::common::{GenericHeader, Pdu, PduHeader};
-use open_dis_rust::simulation_management::{AcknowledgePdu, ActionRequestPdu, ActionResponsePdu, StartResumePdu, StopFreezePdu};
+use open_dis_rust::simulation_management::{
+    AcknowledgePdu, ActionRequestPdu, ActionResponsePdu, StartResumePdu, StopFreezePdu,
+};
 
 use crate::core::app_state::AppState;
 
@@ -72,9 +74,12 @@ pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), Str
 
             pdu.originating_entity_id = centurion_id;
             pdu.receiving_entity_id = receive_all;
-            pdu.action_id = ActionRequestActionID::Initializeinternalparameters as u32;
+            pdu.action_id = ActionRequestActionID::InitializeInternalParameters as u32;
 
-            let mut ids = state.request_ids.lock().map_err(|_| "AppData lock poisoned")?;
+            let mut ids = state
+                .request_ids
+                .lock()
+                .map_err(|_| "AppData lock poisoned")?;
 
             pdu.request_id = ids.action_request;
 
