@@ -7,7 +7,9 @@
 use tauri::Manager;
 use tauri::async_runtime::spawn as tauri_spawn;
 
-use std::sync::Mutex;
+use std::sync::{Mutex, RwLock};
+
+use crate::config::AppConfig;
 
 pub mod cmd;
 pub mod config;
@@ -47,6 +49,7 @@ pub fn run() {
             simulation_state: Mutex::new(core::SimulationState::Stopped),
             request_ids: Mutex::new(core::RequestIds::new()),
         })
+        .manage(RwLock::new(AppConfig::default()))
         .invoke_handler(tauri::generate_handler![
             cmd::config::get_config,
             cmd::config::save_config,

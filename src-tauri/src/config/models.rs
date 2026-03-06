@@ -28,6 +28,7 @@ pub struct AppConfig {
     pub simulation_address: SimulationAddress,
     #[serde(skip)]
     pub advanced: AdvancedConfig,
+    pub scenario_config: ScenarioConfig,
 }
 
 impl Default for AppConfig {
@@ -39,6 +40,10 @@ impl Default for AppConfig {
                 entity_id: 1,
             },
             advanced: AdvancedConfig::default(),
+            scenario_config: ScenarioConfig {
+                multicast_address: "0.0.0.0".to_owned(),
+                port: 0,
+            },
         }
     }
 }

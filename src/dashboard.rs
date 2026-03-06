@@ -15,14 +15,14 @@ pub fn dashboard() -> Html {
             let payload = serde_json::json!({"command": command});
             let _ = invoke(
                 "send_siman_pdu",
-                serde_wasm_bindgen::to_value(&payload).unwrap(),
+                serde_wasm_bindgen::to_value(&payload).unwrap_or_default(),
             )
             .await;
-            web_sys::console::log_1(&format!("Sent {} command", command).into());
-        })
+            web_sys::console::log_1(&format!("Sent {command} command").into());
+        });
     });
 
-    let notifications = use_state(|| Vec::<String>::new());
+    let notifications = use_state(Vec::<String>::new);
 
     let notifications_handle = notifications.clone();
 
