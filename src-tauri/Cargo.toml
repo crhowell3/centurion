@@ -1,6 +1,6 @@
 [package]
 name = "centurion"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Cameron Howell <me@crhowell.com>"]
 description = "A GUI application for managing distributed simulations leveraging the IEEE 1278.1-2012 DIS application protocol."
 edition = "2024"
