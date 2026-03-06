@@ -3,6 +3,7 @@ use tauri::State;
 
 use std::io;
 use std::net::UdpSocket;
+use std::sync::RwLock;
 
 use anyhow::Result;
 
@@ -13,6 +14,7 @@ use open_dis_rust::simulation_management::{
     AcknowledgePdu, ActionRequestPdu, ActionResponsePdu, StartResumePdu, StopFreezePdu,
 };
 
+use crate::config::AppConfig;
 use crate::core::app_state::AppState;
 
 fn handle_res(socket: &UdpSocket) -> Result<(), String> {
@@ -60,10 +62,21 @@ fn handle_ack(socket: &UdpSocket) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), String> {
+pub async fn send_siman_pdu(
+    state: State<'_, AppState>,
+    config: State<'_, RwLock<AppConfig>>,
+    command: String,
+) -> Result<(), String> {
     let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
 
     let mut bytes = BytesMut::new();
+
+    let config = config.read().unwrap();
+
+    let address = config.scenario_config.multicast_address.clone();
+    let port = config.scenario_config.port.clone();
+    tracing::info!("Using address and port {address}:{port}");
+    let dest_addr = format!("{address}:{port}");
 
     let centurion_id = EntityId::new(1, 50, 1);
     let receive_all: EntityId = EntityId::new(0xFFFF, 0xFFFF, 0xFFFF);
@@ -90,7 +103,7 @@ pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), Str
                 .map_err(|_| io::ErrorKind::InvalidData);
 
             socket
-                .send_to(&bytes, "127.0.0.1:3000")
+                .send_to(&bytes, dest_addr)
                 .map_err(|e| e.to_string())?;
 
             handle_res(&socket)?;
@@ -117,7 +130,7 @@ pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), Str
                 .map_err(|_| io::ErrorKind::InvalidData);
 
             socket
-                .send_to(&bytes, "127.0.0.1:3000")
+                .send_to(&bytes, dest_addr)
                 .map_err(|e| e.to_string())?;
 
             handle_ack(&socket)?;
@@ -146,7 +159,7 @@ pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), Str
                 .map_err(|_| io::ErrorKind::InvalidData);
 
             socket
-                .send_to(&bytes, "127.0.0.1:3000")
+                .send_to(&bytes, dest_addr)
                 .map_err(|e| e.to_string())?;
 
             handle_ack(&socket)?;
@@ -174,7 +187,7 @@ pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), Str
                 .map_err(|_| io::ErrorKind::InvalidData);
 
             socket
-                .send_to(&bytes, "127.0.0.1:3000")
+                .send_to(&bytes, dest_addr)
                 .map_err(|e| e.to_string())?;
 
             handle_ack(&socket)?;
@@ -203,7 +216,7 @@ pub fn send_siman_pdu(state: State<AppState>, command: String) -> Result<(), Str
                 .map_err(|_| io::ErrorKind::InvalidData);
 
             socket
-                .send_to(&bytes, "127.0.0.1:3000")
+                .send_to(&bytes, dest_addr)
                 .map_err(|e| e.to_string())?;
 
             handle_ack(&socket)?;

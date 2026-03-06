@@ -1,10 +1,15 @@
+use std::sync::RwLock;
+
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
 use crate::config::{self, AppConfig, ScenarioConfig, SharedConfig};
 
 #[tauri::command]
-pub async fn load_scenario_config(app: tauri::AppHandle) -> Result<ScenarioConfig, String> {
+pub async fn load_scenario_config(
+    app: tauri::AppHandle,
+    config: State<'_, RwLock<AppConfig>>,
+) -> Result<ScenarioConfig, String> {
     let file = app
         .dialog()
         .file()
@@ -14,7 +19,12 @@ pub async fn load_scenario_config(app: tauri::AppHandle) -> Result<ScenarioConfi
     if let Some(path) = file {
         let path = path.into_path().map_err(|_| "Invalid file path")?;
         let contents = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-        toml::from_str(&contents).map_err(|e| e.to_string())
+        if let Ok(cfg) = toml::from_str::<ScenarioConfig>(&contents) {
+            config.write().unwrap().scenario_config = cfg.clone();
+            return Ok(cfg);
+        } else {
+            Err("Unable to parse file".to_string())
+        }
     } else {
         Err("No file selected".to_string())
     }

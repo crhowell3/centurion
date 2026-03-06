@@ -6,13 +6,13 @@ use app::App;
 
 use serde::Deserialize;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum AppStatus {
     WaitingForConfig,
     Loaded(Config),
 }
 
-#[derive(Clone, PartialEq, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Deserialize)]
 pub struct Config {
     pub multicast_address: String,
     pub port: u16,
