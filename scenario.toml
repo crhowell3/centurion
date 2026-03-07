@@ -1,2 +1,7 @@
-multicast_address = "239.255.255.255"
-port = 3000
+[network]
+interface_ip = "0.0.0.0"
+interface_port = 3000
+destination_ip = "239.255.255.255"
+destination_port = 3000
+enable_broadcast = true
+multicast_ttl = 128
