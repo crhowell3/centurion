@@ -67,18 +67,43 @@ pub async fn send_siman_pdu(
     config: State<'_, RwLock<AppConfig>>,
     command: String,
 ) -> Result<(), String> {
-    let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
+    let config = config.read().unwrap();
+
+    let enable_broadcast = config.scenario_config.network.enable_broadcast.clone();
+    tracing::trace!("enable_broadcast={enable_broadcast}");
+
+    let multicast_ttl = config.scenario_config.network.multicast_ttl.clone();
+    tracing::trace!("multicast_ttl={multicast_ttl}");
+
+    let interface_ip = config.scenario_config.network.interface_ip.clone();
+    tracing::trace!("interface_ip={interface_ip}");
+    let interface_port = config.scenario_config.network.interface_port.clone();
+    tracing::trace!("interface_port={interface_port}");
+
+    let interface_addr = format!("{interface_ip}:{interface_port}");
+
+    let socket = UdpSocket::bind(interface_addr).map_err(|e| e.to_string())?;
+    socket
+        .set_broadcast(enable_broadcast)
+        .unwrap_or_else(|_| tracing::error!("unable to configure UDP broadcast"));
+    socket
+        .set_multicast_ttl_v4(multicast_ttl)
+        .unwrap_or_else(|_| tracing::error!("unable to configure multicast TTL"));
 
     let mut bytes = BytesMut::new();
 
-    let config = config.read().unwrap();
+    let ip = config.scenario_config.network.destination_ip.clone();
+    tracing::trace!("destination_ip={ip}");
+    let port = config.scenario_config.network.destination_port.clone();
+    tracing::trace!("destination_port={port}");
 
-    let address = config.scenario_config.multicast_address.clone();
-    let port = config.scenario_config.port.clone();
-    tracing::info!("Using address and port {address}:{port}");
-    let dest_addr = format!("{address}:{port}");
+    let dest_addr = format!("{ip}:{port}");
 
-    let centurion_id = EntityId::new(1, 50, 1);
+    let site_id: u16 = 1;
+    let app_id: u16 = 50;
+    let entity_id: u16 = 1;
+
+    let centurion_id = EntityId::new(site_id, app_id, entity_id);
     let receive_all: EntityId = EntityId::new(0xFFFF, 0xFFFF, 0xFFFF);
 
     match command.as_str() {

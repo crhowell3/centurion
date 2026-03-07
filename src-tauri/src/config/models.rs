@@ -18,9 +18,31 @@ pub struct AdvancedConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Network {
+    pub interface_ip: String,
+    pub interface_port: u16,
+    pub destination_ip: String,
+    pub destination_port: u16,
+    pub enable_broadcast: bool,
+    pub multicast_ttl: u32,
+}
+
+impl Default for Network {
+    fn default() -> Self {
+        Self {
+            interface_ip: "0.0.0.0".to_string(),
+            interface_port: 3000,
+            destination_ip: "0.0.0.0".to_string(),
+            destination_port: 3000,
+            enable_broadcast: false,
+            multicast_ttl: 42,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ScenarioConfig {
-    pub multicast_address: String,
-    pub port: u16,
+    pub network: Network,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -40,10 +62,7 @@ impl Default for AppConfig {
                 entity_id: 1,
             },
             advanced: AdvancedConfig::default(),
-            scenario_config: ScenarioConfig {
-                multicast_address: "0.0.0.0".to_owned(),
-                port: 0,
-            },
+            scenario_config: ScenarioConfig::default(),
         }
     }
 }
