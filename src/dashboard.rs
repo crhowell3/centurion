@@ -1,36 +1,103 @@
+use std::fmt;
+
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
-    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], catch)]
+    async fn invoke(cmd: &str, args: JsValue) -> Result<JsValue, JsValue>;
+}
+
+#[allow(dead_code)]
+#[derive(Clone, PartialEq, Eq)]
+enum NotificationLevel {
+    Info,
+    Warning,
+    Error,
+}
+
+impl fmt::Display for NotificationLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            NotificationLevel::Info => write!(f, "INFO"),
+            NotificationLevel::Warning => write!(f, "WARN"),
+            NotificationLevel::Error => write!(f, "ERROR"),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
+struct Notification {
+    message: String,
+    level: NotificationLevel,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+struct Notifications(Vec<Notification>);
+
+enum NotificationAction {
+    Push(Notification),
+}
+
+impl Reducible for Notifications {
+    type Action = NotificationAction;
+
+    fn reduce(self: std::rc::Rc<Self>, action: Self::Action) -> std::rc::Rc<Self> {
+        match action {
+            NotificationAction::Push(n) => {
+                let mut list = self.0.clone();
+                list.push(n);
+                Notifications(list).into()
+            }
+        }
+    }
 }
 
 #[function_component(Dashboard)]
 pub fn dashboard() -> Html {
-    let send_siman_pdu = Callback::from(|command: &'static str| {
-        spawn_local(async move {
-            let payload = serde_json::json!({"command": command});
-            let _ = invoke(
-                "send_siman_pdu",
-                serde_wasm_bindgen::to_value(&payload).unwrap_or_default(),
-            )
-            .await;
-            web_sys::console::log_1(&format!("Sent {command} command").into());
-        });
-    });
+    let notifications = use_reducer(|| Notifications(Vec::new()));
 
-    let notifications = use_state(Vec::<String>::new);
+    let append_notification = {
+        let notifications = notifications.clone();
 
-    let notifications_handle = notifications.clone();
+        Callback::from(move |notification: Notification| {
+            notifications.dispatch(NotificationAction::Push(notification));
+        })
+    };
 
-    let append_notification = Callback::from(move |message: String| {
-        let mut new_notifications = (*notifications_handle).clone();
-        new_notifications.push(message);
-        notifications_handle.set(new_notifications);
-    });
+    let send_siman_pdu = {
+        let notify = append_notification.clone();
+
+        Callback::from(move |command: &'static str| {
+            let notify = notify.clone();
+
+            spawn_local(async move {
+                let payload = serde_json::json!({"command": command});
+
+                let result = invoke(
+                    "send_siman_pdu",
+                    serde_wasm_bindgen::to_value(&payload).unwrap_or_default(),
+                )
+                .await;
+                match result {
+                    Ok(_) => {
+                        // noop
+                    }
+                    Err(err) => {
+                        notify.emit(Notification {
+                            message: format!(
+                                "{}",
+                                err.as_string().unwrap_or_else(|| "unknown error".into())
+                            ),
+                            level: NotificationLevel::Error,
+                        });
+                    }
+                }
+            });
+        })
+    };
 
     let send_command = |cmd: &'static str| {
         let send = send_siman_pdu.clone();
@@ -38,7 +105,10 @@ pub fn dashboard() -> Html {
 
         Callback::from(move |_| {
             send.emit(cmd);
-            notify.emit(format!("{} command sent", cmd.to_uppercase()));
+            notify.emit(Notification {
+                message: format!("{} command sent", cmd.to_uppercase()),
+                level: NotificationLevel::Info,
+            });
         })
     };
 
@@ -65,9 +135,18 @@ pub fn dashboard() -> Html {
                 <section class="panel wide">
                     <h2>{"Notifications"}</h2>
                     <ul class="alerts">
-                        {notifications.iter().rev().map(|message| html! {
-                            <li class="alert info">{format!("[INFO] {message}")}</li>
-                        }).collect::<Html>()}
+                        {notifications.0.iter().rev().map(|n| {
+                            let class = match n.level {
+                                NotificationLevel::Info => "info",
+                                NotificationLevel::Warning => "warning",
+                                NotificationLevel::Error => "error",
+                            };
+
+                            html! {
+                                <li class={format!("alert {class}")}>{format!("[{}] {}", &n.level, &n.message)}</li>
+                            }
+                        }).collect::<Html>()
+                        }
                     </ul>
                 </section>
             </main>
