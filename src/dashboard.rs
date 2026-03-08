@@ -21,9 +21,9 @@ enum NotificationLevel {
 impl fmt::Display for NotificationLevel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            NotificationLevel::Info => write!(f, "INFO"),
-            NotificationLevel::Warning => write!(f, "WARN"),
-            NotificationLevel::Error => write!(f, "ERROR"),
+            Self::Info => write!(f, "INFO"),
+            Self::Warning => write!(f, "WARN"),
+            Self::Error => write!(f, "ERROR"),
         }
     }
 }
@@ -49,7 +49,7 @@ impl Reducible for Notifications {
             NotificationAction::Push(n) => {
                 let mut list = self.0.clone();
                 list.push(n);
-                Notifications(list).into()
+                Self(list).into()
             }
         }
     }
@@ -87,10 +87,7 @@ pub fn dashboard() -> Html {
                     }
                     Err(err) => {
                         notify.emit(Notification {
-                            message: format!(
-                                "{}",
-                                err.as_string().unwrap_or_else(|| "unknown error".into())
-                            ),
+                            message: err.as_string().unwrap_or_else(|| "unknown error".into()),
                             level: NotificationLevel::Error,
                         });
                     }
