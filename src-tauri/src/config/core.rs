@@ -18,7 +18,7 @@ use crate::config::{AdvancedConfig, AppConfig};
 
 pub async fn load_config(app_handle: &AppHandle) -> AppConfig {
     try_load_or_create_config(app_handle).await.inspect_err(|e| {
-        tracing::error!("A critical error occurred during configuration loading: {e}, Using default configuration.");
+        eprintln!("A critical error occurred during configuration loading: {e}, Using default configuration.");
     }).unwrap_or_default()
 }
 
@@ -40,7 +40,7 @@ pub async fn save_config(app_handle: &AppHandle, config: &AppConfig) -> Result<(
         .await
         .with_context(|| format!("Failed to write configuration to {}", config_path.display()))?;
 
-    tracing::info!(
+    println!(
         "Configuration saved successfully to {}",
         config_path.display()
     );
@@ -63,14 +63,14 @@ async fn try_load_or_create_config(app_handle: &AppHandle) -> Result<AppConfig> 
     let config_path = get_config_path(app_handle)?;
 
     if !config_path.exists() {
-        tracing::info!(
+        eprintln!(
             "No config file found at {}. Creating a default one.",
             config_path.display()
         );
 
         let config = AppConfig::default();
         save_config(app_handle, &config).await.unwrap_or_else(|e| {
-            tracing::error!("Failed to save the default config file: {e}");
+            eprintln!("Failed to save the default config file: {e}");
         });
 
         return Ok(config);
@@ -81,7 +81,7 @@ async fn try_load_or_create_config(app_handle: &AppHandle) -> Result<AppConfig> 
         .merge(Toml::file(&config_path))
         .extract()
         .map_err(|e| {
-            tracing::error!(
+            eprintln!(
                 "Failed to parse config file at {}: {e:#}",
                 config_path.display()
             );
@@ -94,7 +94,7 @@ async fn try_load_or_create_config(app_handle: &AppHandle) -> Result<AppConfig> 
 
     config.advanced = load_advanced_config(&config_path).await?;
 
-    tracing::info!("Config loaded successfully from {}", config_path.display());
+    println!("Config loaded successfully from {}", config_path.display());
 
     Ok(config)
 }
