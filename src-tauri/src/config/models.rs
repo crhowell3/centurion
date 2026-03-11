@@ -11,7 +11,7 @@ pub struct SimulationAddress {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
-#[serde(default, rename_all = "camelCase")]
+#[serde(default)]
 pub struct AdvancedConfig {
     #[serde(default = "LogLevel::default_for_build")]
     pub log_level: LogLevel,
@@ -48,7 +48,6 @@ pub struct ScenarioConfig {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AppConfig {
     pub simulation_address: SimulationAddress,
-    #[serde(skip)]
     pub advanced: AdvancedConfig,
     pub scenario_config: ScenarioConfig,
 }

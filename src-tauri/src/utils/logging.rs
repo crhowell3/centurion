@@ -84,8 +84,8 @@ pub fn init_logging(log_dir: &PathBuf, log_level: LogLevel) -> Result<(), String
         .with(stdout_layer)
         .init();
 
-    tracing::info!("Logging initialized at level: {log_level}");
-    tracing::info!("Log directory: {}", log_dir.display());
+    tracing::debug!("Logging initialized at level: {log_level}");
+    tracing::debug!("Log directory: {}", log_dir.display());
 
     Ok(())
 }
