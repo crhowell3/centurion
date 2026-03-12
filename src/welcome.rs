@@ -30,17 +30,16 @@ pub fn welcome_modal(props: &WelcomeModalProps) -> Html {
                 match result {
                     Ok(_) => {
                         let dummy_config = crate::Config {
-                            multicast_address: "".to_owned(),
+                            multicast_address: String::new(),
                             port: 1,
                         };
                         on_loaded.emit(dummy_config);
                     }
                     Err(err) => {
-                        error_message.set(Some(format!(
-                            "{}",
-                            err.as_string()
-                                .unwrap_or_else(|| "unknown error received from backend".into())
-                        )));
+                        error_message
+                            .set(Some(err.as_string().unwrap_or_else(|| {
+                                "unknown error received from backend".into()
+                            })));
                     }
                 }
             });
@@ -64,19 +63,15 @@ pub fn welcome_modal(props: &WelcomeModalProps) -> Html {
         </div>
 
         {
-            if let Some(err) = &*error_message {
-                html! {
-                    <div class="modal-backdrop">
-                        <div class="modal error">
-                            <h2>{ "Error Loading Config" }</h2>
-                            <p>{ err }</p>
-                            <button onclick={close_error}>{ "OK" }</button>
-                        </div>
+            error_message.as_ref().map_or_else(|| html! {}, |err| html! {
+                <div class="modal-backdrop">
+                    <div class="modal error">
+                        <h2>{ "Error Loading Config" }</h2>
+                        <p>{ err }</p>
+                        <button onclick={close_error}>{ "OK" }</button>
                     </div>
-                }
-            } else {
-                html! {}
-            }
+                </div>
+            })
         }
         </>
     }
